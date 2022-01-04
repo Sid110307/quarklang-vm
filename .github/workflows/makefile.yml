@@ -21,4 +21,4 @@ jobs:
       run: make -s
 
     - name: Compile Tests
-      run: for i in ../tests/*.qas; do ./bin/quarki -f "$i"; done
+      run: shopt -s nullglob; for i in ../tests/*.qas; do ./bin/quarki -f "$i"; done; shopt -u nullglob
