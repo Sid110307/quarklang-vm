@@ -1,0 +1,10 @@
+{
+	"makefile.extensionOutputFolder": "./.vscode",
+	"files.exclude": {
+		"**/*.qce": true,
+		"bin/*": true,
+		"**/.idea": true,
+		"**/node_modules": true,
+		"**/*.vsix": true
+	}
+}

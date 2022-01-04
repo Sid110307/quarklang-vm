@@ -5,9 +5,9 @@ VS Code Language Support for QuarkLang Assembly (QAS) files
 ## Features
 
 - Syntax highlighting
-- Code completion
-- Linter
-- Easy Compilation/Execution
+<!-- - Code completion -->
+<!-- - Linter -->
+<!-- - Easy Compilation/Execution -->
 
 ## Requirements
 

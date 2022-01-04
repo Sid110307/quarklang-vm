@@ -1,24 +1,26 @@
 name: Makefile CI
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    push:
+        branches: [master]
+    pull_request:
+        branches: [master]
 
 jobs:
-  build:
+    build:
+        runs-on: ubuntu-latest
 
-    runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
 
-    steps:
-    - uses: actions/checkout@v2
-    
-    - name: Clean Binaries
-      run: make clean -s
+            - name: Clean Binaries
+              run: make clean -s
 
-    - name: Build Binaries
-      run: make -s
+            - name: Build Binaries
+              run: make -s
 
-    - name: Compile Tests
-      run: shopt -s nullglob; for i in ../tests/*.qas; do ./bin/quarki -f "$i"; done; shopt -u nullglob
+            - name: Compile Examples
+              run: make examples -s
+
+            - name: Clean Binaries again
+              run: make clean -s

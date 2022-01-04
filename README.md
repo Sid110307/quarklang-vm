@@ -91,16 +91,6 @@ $ quarkc --debug -f <source.qas>
 
 ## Examples
 
-### 1 2 3
-
-```x86asm
-put 1
-put 2
-put 3
-plus
-plus
-```
-
 ### Fibonacci
 
 ```x86asm

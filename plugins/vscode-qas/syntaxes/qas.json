@@ -14,7 +14,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control",
-					"match": "\\b(put|dup|jmp|jeq|hlt)\\b"
+					"match": "\\b(put|kaput|dup|jmp|jif|stop)\\b"
 				},
 				{
 					"name": "keyword.operator",

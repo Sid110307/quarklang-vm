@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 
 				if (debug)
 				{
-					printf("[\033[1;34mINFO\033[0m]: Debugger started.\n");
+					printf("[\033[1;34mINFO\033[0m]: Debugger started for file '%s'.\n", inputFilePath);
 					printf("[\033[1;34mINFO\033[0m]: Total instructions: %d\n", VM_EXECUTION_LIMIT);
 					printf("[\033[1;34mINFO\033[0m]: Type '?' for a list of commands.\n");
 				}
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
 
 					if (exception != EX_OK)
 					{
-						fprintf(stderr, "[\033[1;31mERROR\033[0m]: Error at Op %d: %s\n", i + 1, exceptionAsCstr(exception));
+						fprintf(stderr, "[\033[1;31mERROR\033[0m]: In file '%s',\n  Error at Op %d: %s\n", inputFilePath, i + 1, exceptionAsCstr(exception));
 						exit(EXIT_FAILURE);
 					}
 				}

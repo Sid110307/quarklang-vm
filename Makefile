@@ -1,8 +1,9 @@
 CFLAGS=-Wall -Wextra -std=c11 -pedantic
 LIBS=
 
-.PHONY: all
+EXAMPLES=examples/fibonacci.qce examples/123.qce
 
+.PHONY: all
 all: interpreter compiler
 
 help:
@@ -11,9 +12,11 @@ help:
 	@echo "\033[1;36m  interpreter\033[0m: Compile the interpreter."
 	@echo "\033[1;36m  compiler\033[0m: Compile the compiler."
 	@echo "\033[1;36m  all\033[0m: Compile all targets."
+	@echo "\033[1;36m  examples\033[0m: Compile examples."
 	@echo "\033[1;36m  clean\033[0m: Remove all compiled files (\033[1;31mWARNING\033[0m: This will also remove the interpreter and compiler binaries)."
 	@echo "\033[1;36m  install\033[0m: Install the binaries to the system."
 	@echo "\033[1;36m  install-user\033[0m: Install the binaries to the user's home directory."
+	@echo "\033[1;36m  ext-install\033[0m: Install the extensions/plugins for an editor."
 	@echo "\033[1;36m  help\033[0m: Show this help message and exit."
 
 interpreter: src/quarki.c src/compiler.c
@@ -27,6 +30,12 @@ compiler: src/quarkc.c src/compiler.c
 	sudo mkdir -p bin
 	sudo $(CC) $(CFLAGS) -o bin/quarkc $< $(LIBS)
 	@echo "\033[1;32mDone.\033[0m"
+
+.PHONY: examples
+examples: $(EXAMPLES)
+
+examples/%.qce: examples/%.qas
+	./bin/quarki -f $<
 
 install:
 	@echo -n "\033[1;36mInstalling binaries... \033[0m"
@@ -57,6 +66,9 @@ install-user:
 
 	@echo "\033[1;32mDone.\033[0m"
 	@echo "\033[1;36mReload your terminal or run 'source ~/.bashrc' to use the new binaries.\033[0m"
+
+ext-install:
+	./extensionInstaller.sh
 
 clean:
 	@echo -n "\033[1;36mCleaning up... \033[0m"
