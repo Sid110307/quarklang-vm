@@ -1,0 +1,54 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "QuarkLang Assembly",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control",
+					"match": "\\b(put|dup|jmp|jeq|hlt)\\b"
+				},
+				{
+					"name": "keyword.operator",
+					"match": "\\b(plus|minus|mul|div|mod)\\b"
+				},
+				{
+					"name": "entity.name.function",
+					"match": "\\b(\\w+)\\b\\s*:\\s*"
+				},
+				{
+					"name": "keyword.other",
+					"match": "\\b(eq|lt|gt|le|ge)\\b"
+				},
+				{
+					"name": "constant.numeric",
+					"match": "\\b(0|[1-9][0-9]*)\\b"
+				},
+				{
+					"name": "comment.line.double-dash",
+					"match": "--.*$"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.qas",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.qas",
+					"match": "\\\\."
+				}
+			]
+		}
+	},
+	"scopeName": "source.qas"
+}
