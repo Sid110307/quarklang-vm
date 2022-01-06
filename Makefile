@@ -34,8 +34,8 @@ compiler: src/quarkc.c src/compiler.c
 .PHONY: examples
 examples: $(EXAMPLES)
 
-examples/%.qce: examples/%.qas
-	./bin/quarki -f $<
+examples/%.qce: interpreter examples/%.qas
+	./bin/quarki -f $(word 2, $^)
 
 install:
 	@echo -n "\033[1;36mInstalling binaries... \033[0m"
