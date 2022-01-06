@@ -23,6 +23,7 @@ $ make ext-install -s
 # .----------------------------------.
 # | QuarkLang VM Extension Installer |
 # '----------------------------------'
+```
 
 ## Known Issues
 

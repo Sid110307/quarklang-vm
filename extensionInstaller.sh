@@ -28,18 +28,17 @@ for EDITOR in $CHOICES; do
 			sudo npm install -g vsce
 
 			cd plugins/vscode-qas
-			vsce package
-			sudo cp *.vsix $HOME/.vscode/extensions/
+			vsce package &>/dev/null
+			code --install-extension *.vsix
 			cd ../../
 
 			dialog --title "QuarkLang VM Extension Installer" --msgbox "Installation complete (VS Code)." 0 0
 		else
 			cd plugins/vscode-qas
-
 			vsce package &>/dev/null
-			sudo cp *.vsix $HOME/.vscode/extensions/
-
+			code --install-extension *.vsix
 			cd ../../
+
 			dialog --title "QuarkLang VM Extension Installer" --msgbox "Installation complete (VS Code)." 0 0
 		fi
 	else

@@ -1,3 +1,5 @@
+> # NOT IMPLEMENTED YET!
+
 # Emacs QAS
 
 Emacs Language Support for QuarkLang Assembly (QAS) files
@@ -23,6 +25,7 @@ $ make ext-install -s
 # .----------------------------------.
 # | QuarkLang VM Extension Installer |
 # '----------------------------------'
+```
 
 ## Known Issues
 

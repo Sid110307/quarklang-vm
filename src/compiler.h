@@ -1,3 +1,6 @@
+#ifndef QUARK_VM_COMPILER_H_
+#define QUARK_VM_COMPILER_H_
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,7 +8,7 @@
 #include <errno.h>
 #include <ctype.h>
 
-#define VM_STACK_SIZE 1024
+#define VM_STACK_SIZE 524288
 #define VM_PROGRAM_SIZE 1024
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -22,20 +25,7 @@ typedef enum
 	EX_ILLEGAL_OPERATION,
 } Exception;
 
-const char* exceptionAsCstr(Exception exception)
-{
-	switch (exception)
-	{
-	case EX_OK: return "All OK";
-	case EX_STACK_OVERFLOW: return "EX_STACK_OVERFLOW";
-	case EX_STACK_UNDERFLOW: return "EX_STACK_UNDERFLOW";
-	case EX_INVALID_INSTRUCTION: return "EX_INVALID_INSTRUCTION";
-	case EX_DIVIDE_BY_ZERO: return "EX_DIVIDE_BY_ZERO";
-	case EX_ILLEGAL_INSTRUCTION_ACCESS: return "EX_ILLEGAL_INSTRUCTION_ACCESS";
-	case EX_ILLEGAL_OPERATION: return "EX_ILLEGAL_OPERATION";
-	default: assert(0 && "[exceptionAsCstr]: Unreachable");
-	}
-}
+const char* exceptionAsCstr(Exception exception);
 
 typedef signed long int Word;
 
@@ -59,6 +49,89 @@ typedef enum
 	INST_HALT,
 	INST_PRINT_DEBUG,
 } InstructionType;
+
+const char* instructionTypeAsCstr(InstructionType type);
+
+typedef struct
+{
+	InstructionType type;
+	Word value;
+} Instruction;
+
+typedef struct
+{
+	Word stack[VM_STACK_SIZE];
+	Word stackSize;
+
+	Instruction program[VM_PROGRAM_SIZE];
+	Word programSize;
+	Word instructionPointer;
+
+	int halt;
+} QuarkVM;
+
+// TODO: Replace instruction macros with functions
+
+#define PUT_INSTRUCTION(val) { .type = INST_PUT, .value = val }
+#define DUP_INSTRUCTION(addr) { .type = INST_DUP, .value = addr }
+#define ADD_INSTRUCTION { .type = INST_ADD }
+#define SUB_INSTRUCTION { .type = INST_SUB }
+#define MUL_INSTRUCTION { .type = INST_MUL }
+#define DIV_INSTRUCTION { .type = INST_DIV }
+#define MOD_INSTRUCTION { .type = INST_MOD }
+#define JUMP_INSTRUCTION(addr) { .type = INST_JUMP, .value = addr }
+#define JUMP_IF_INSTRUCTION(addr) { .type = INST_JUMP_IF, .value = addr }
+#define EQ_INSTRUCTION { .type = INST_EQ }
+#define GT_INSTRUCTION { .type = INST_GT }
+#define LT_INSTRUCTION { .type = INST_LT }
+#define GEQ_INSTRUCTION { .type = INST_GEQ }
+#define LEQ_INSTRUCTION { .type = INST_LEQ }
+#define HALT_INSTRUCTION { .type = INST_HALT }
+
+Exception vmExecuteInstruction(QuarkVM* vm);
+Exception vmExecuteProgram(QuarkVM* vm, int limit, int printOps, int debug);
+void vmDumpStack(FILE* stream, const QuarkVM* quarkVm);
+void vmLoadProgramFromMemory(QuarkVM* quarkVm, Instruction* program, size_t programSize);
+void vmLoadProgramFromFile(QuarkVM* quarkVm, const char* filePath);
+void vmSaveProgramToFile(const QuarkVM* vm, const char* filePath);
+
+QuarkVM quarkVm = { 0 };
+
+typedef struct
+{
+	size_t count;
+	const char* data;
+} StringView;
+
+StringView sv_cstrAsStringView(const char* cstr);
+StringView sv_trimStart(StringView sv);
+StringView sv_trimEnd(StringView sv);
+StringView sv_trim(StringView sv);
+StringView sv_trimByDelimeter(StringView* sv, char delimeter);
+int sv_equals(StringView a, StringView b);
+int sv_toInt(StringView sv);
+StringView sv_readFile(const char* filePath);
+
+Instruction vmParseLine(StringView line);
+size_t vmParseSource(StringView source, Instruction* program, size_t programCapacity);
+
+#endif // QUARK_VM_COMPILER_H_
+#ifdef QUARK_VM_COMPILER_IMPLEMENTATION
+
+const char* exceptionAsCstr(Exception exception)
+{
+	switch (exception)
+	{
+	case EX_OK: return "All OK";
+	case EX_STACK_OVERFLOW: return "EX_STACK_OVERFLOW";
+	case EX_STACK_UNDERFLOW: return "EX_STACK_UNDERFLOW";
+	case EX_INVALID_INSTRUCTION: return "EX_INVALID_INSTRUCTION";
+	case EX_DIVIDE_BY_ZERO: return "EX_DIVIDE_BY_ZERO";
+	case EX_ILLEGAL_INSTRUCTION_ACCESS: return "EX_ILLEGAL_INSTRUCTION_ACCESS";
+	case EX_ILLEGAL_OPERATION: return "EX_ILLEGAL_OPERATION";
+	default: assert(0 && "[exceptionAsCstr]: Unreachable");
+	}
+}
 
 const char* instructionTypeAsCstr(InstructionType type)
 {
@@ -84,40 +157,6 @@ const char* instructionTypeAsCstr(InstructionType type)
 	default: assert(0 && "[instructionTypeAsCstr]: Unreachable");
 	}
 }
-
-typedef struct
-{
-	InstructionType type;
-	Word value;
-} Instruction;
-
-typedef struct
-{
-	Word stack[VM_STACK_SIZE];
-	Word stackSize;
-
-	Instruction program[VM_PROGRAM_SIZE];
-	Word programSize;
-	Word instructionPointer;
-
-	int halt;
-} QuarkVM;
-
-// #define PUT_INSTRUCTION(val) { .type = INST_PUT, .value = val }
-// #define DUP_INSTRUCTION(addr) { .type = INST_DUP, .value = addr }
-// #define ADD_INSTRUCTION { .type = INST_ADD }
-// #define SUB_INSTRUCTION { .type = INST_SUB }
-// #define MUL_INSTRUCTION { .type = INST_MUL }
-// #define DIV_INSTRUCTION { .type = INST_DIV }
-// #define MOD_INSTRUCTION { .type = INST_MOD }
-// #define JUMP_INSTRUCTION(addr) { .type = INST_JUMP, .value = addr }
-// #define JUMP_IF_INSTRUCTION(addr) { .type = INST_JUMP_IF, .value = addr }
-// #define EQ_INSTRUCTION { .type = INST_EQ }
-// #define GT_INSTRUCTION { .type = INST_GT }
-// #define LT_INSTRUCTION { .type = INST_LT }
-// #define GEQ_INSTRUCTION { .type = INST_GEQ }
-// #define LEQ_INSTRUCTION { .type = INST_LEQ }
-// #define HALT_INSTRUCTION { .type = INST_HALT }
 
 Exception vmExecuteInstruction(QuarkVM* vm)
 {
@@ -248,6 +287,83 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 	return EX_OK;
 }
 
+Exception vmExecuteProgram(QuarkVM* vm, int limit, int printOps, int debug)
+{
+	if (debug)
+	{
+		printf("[\033[1;34mINFO\033[0m]: Debugger started.\n");
+		if (VM_EXECUTION_LIMIT < 0) printf("[\033[1;34mINFO\033[0m]: Total instructions: %s\n", "Unlimited");
+		else printf("[\033[1;34mINFO\033[0m]: Total instructions: %d\n", VM_EXECUTION_LIMIT);
+		printf("[\033[1;34mINFO\033[0m]: Type '?' for a list of commands.\n");
+	}
+
+	for (int i = 1; limit != 0 && !vm->halt; ++i)
+	{
+		if (printOps || debug)
+		{
+			printf("Op %d:\n", i);
+			printf("  Type: %s\n", instructionTypeAsCstr(quarkVm.program[i].type));
+
+			if (quarkVm.program[i].type == INST_PUT ||
+				quarkVm.program[i].type == INST_DUP ||
+				quarkVm.program[i].type == INST_JUMP ||
+				quarkVm.program[i].type == INST_JUMP_IF)
+				printf("  Value: %ld\n", quarkVm.program[i].value);
+		}
+
+		if (debug)
+		{
+			printf("\n>> ");
+			char input[256];
+
+			while (fgets(input, sizeof(input), stdin) != NULL)
+			{
+				input[strlen(input) - 1] = '\0';
+				if (strcmp(input, "?") == 0)
+				{
+					printf("[\033[1;34mINFO\033[0m]: Available commands:\n");
+					printf("[\033[1;34mINFO\033[0m]: ?: Print this help message\n");
+					printf("[\033[1;34mINFO\033[0m]: .: Print the current stack\n");
+					printf("[\033[1;34mINFO\033[0m]: !: Exit the debugger\n");
+					printf("[\033[1;34mINFO\033[0m]: Type nothing to continue to the next instruction\n");
+				}
+				else if (strcmp(input, ".") == 0)
+					vmDumpStack(stdout, &quarkVm);
+				else if (strcmp(input, "!") == 0)
+				{
+					printf("[\033[1;34mINFO\033[0m]: Exiting debugger...\n");
+					return EXIT_SUCCESS;
+				}
+				else if (strcmp(input, "") == 0)
+					break;
+				else
+				{
+					fprintf(stderr, "[\033[1;31mERROR\033[0m]: Unknown command '%s'.\n", input);
+					printf("[\033[1;34mINFO\033[0m]: Type '?' for a list of commands.\n");
+				}
+
+				printf("\n>> ");
+			}
+		}
+
+		Exception exception = vmExecuteInstruction(vm);
+		if (exception != EX_OK)
+		{
+			fprintf(stderr, "[\033[1;31mERROR\033[0m]: Error at Op %d: %s\n", i, exceptionAsCstr(exception));
+			return exception;
+		}
+
+		if (quarkVm.halt) printf("[\033[1;34mINFO\033[0m]: Program halted at Op %d.\n", i);
+
+		if (limit != -1) --limit;
+	}
+
+	vmDumpStack(stdout, &quarkVm);
+	if (debug) printf("\n[\033[1;34mINFO\033[0m]: Debugger finished with %ld executed instructions (excluding INST_KAPUT).\n", quarkVm.instructionPointer);
+
+	return EX_OK;
+}
+
 void vmDumpStack(FILE* stream, const QuarkVM* quarkVm)
 {
 	fprintf(stream, "Stack:");
@@ -312,7 +428,7 @@ void vmLoadProgramFromFile(QuarkVM* quarkVm, const char* filePath)
 	fclose(file);
 }
 
-void vmSaveProgramToFile(Instruction* program, size_t programSize, const char* filePath)
+void vmSaveProgramToFile(const QuarkVM* vm, const char* filePath)
 {
 	FILE* file = fopen(filePath, "wb");
 	if (file == NULL)
@@ -321,7 +437,7 @@ void vmSaveProgramToFile(Instruction* program, size_t programSize, const char* f
 		exit(EXIT_FAILURE);
 	}
 
-	fwrite(program, sizeof(program[0]), programSize, file);
+	fwrite(vm->program, sizeof(vm->program[0]), vm->programSize, file);
 
 	if (ferror(file))
 	{
@@ -331,14 +447,6 @@ void vmSaveProgramToFile(Instruction* program, size_t programSize, const char* f
 
 	fclose(file);
 }
-
-QuarkVM quarkVm = { 0 };
-
-typedef struct
-{
-	size_t count;
-	const char* data;
-} StringView;
 
 StringView sv_cstrAsStringView(const char* cstr)
 {
@@ -417,6 +525,58 @@ int sv_toInt(StringView sv)
 		result = result * 10 + sv.data[i] - '0';
 
 	return result;
+}
+
+StringView sv_readFile(const char* filePath)
+{
+	FILE* file = fopen(filePath, "r");
+	if (file == NULL)
+	{
+		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not open file '%s' (%s)\n", filePath, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	if (fseek(file, 0, SEEK_END) < 0)
+	{
+		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	long fileSize = ftell(file);
+	if (fileSize < 0)
+	{
+		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	char* fileContent = malloc(fileSize + 1);
+	if (fileContent == NULL)
+	{
+		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not allocate memory for file '%s' (%s)\n", filePath, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	if (fseek(file, 0, SEEK_SET) < 0)
+	{
+		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	size_t readBytes = fread(fileContent, 1, fileSize, file);
+	if (ferror(file))
+	{
+		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	fileContent[fileSize] = '\0';
+
+	fclose(file);
+	return (StringView)
+	{
+		.count = readBytes,
+			.data = fileContent,
+	};
 }
 
 Instruction vmParseLine(StringView line)
@@ -528,9 +688,14 @@ Instruction vmParseLine(StringView line)
 	{
 		.type = INST_HALT,
 	};
+	else if (sv_equals(instructionName, sv_cstrAsStringView("print")))
+		return (Instruction)
+	{
+		.type = INST_PRINT_DEBUG,
+	};
 	else
 	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Invalid instruction '%s'\n", instructionName.data);
+		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Invalid instruction '%.*s'\n", (int)instructionName.count, instructionName.data);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -544,61 +709,11 @@ size_t vmParseSource(StringView source, Instruction* program, size_t programCapa
 		assert(programSize < programCapacity);
 		StringView line = sv_trim(sv_trimByDelimeter(&source, '\n'));
 
-		if (line.count > 0)
+		if (line.count > 0 && !(line.data[0] == '-' && line.data[1] == '-'))
 			program[programSize++] = vmParseLine(line);
 	}
 
 	return programSize;
 }
 
-StringView readFile(const char* filePath)
-{
-	FILE* file = fopen(filePath, "r");
-	if (file == NULL)
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not open file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	if (fseek(file, 0, SEEK_END) < 0)
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	long fileSize = ftell(file);
-	if (fileSize < 0)
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	char* fileContent = malloc(fileSize + 1);
-	if (fileContent == NULL)
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not allocate memory for file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	if (fseek(file, 0, SEEK_SET) < 0)
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	size_t readBytes = fread(fileContent, 1, fileSize, file);
-	if (ferror(file))
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	fileContent[fileSize] = '\0';
-
-	fclose(file);
-	return (StringView)
-	{
-		.count = readBytes,
-			.data = fileContent,
-	};
-}
+#endif

@@ -1,5 +1,9 @@
 # QuarkLang VM
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Makefile CI: Build Status](
+https://github.com/Sid110307/quarklang-vm/actions/workflows/makefile.yml/badge.svg?branch=master)
+
 > The QuarkLang Virtual Machine.
 
 ## Getting Started
@@ -10,24 +14,17 @@
 
   - Git Clone via HTTPS:
 
-    ```sh
-    $ git clone https://github.com/Sid110307/quarklang-vm.git
-    # Cloning into 'quarklang-vm'...
-    ```
-
-  - Git Clone via SSH:
-
-    ```sh
-    $ git clone git@github.com:Sid110307/quarklang-vm.git
-    # Cloning into 'quarklang-vm'...
-    ```
+        ```sh
+        $ git clone https://github.com/Sid110307/quarklang-vm.git
+        # Cloning into 'quarklang-vm'...
+        ```
 
   - GitHub CLI:
 
-    ```sh
-    $ gh repo clone Sid110307/quarklang-vm
-    # Cloning into 'quarklang-vm'...
-    ```
+        ```sh
+        $ gh repo clone Sid110307/quarklang-vm
+        # Cloning into 'quarklang-vm'...
+        ```
 
 - Enter the directory:
 
@@ -62,7 +59,7 @@ $ make install-user
 
 ### Compiling and running the code
 
-- To compile a QuarkLang Assembly file (`.qas`) into a QuarkLang Compiled Executable (`.qce`) file, run the following command:
+- To compile a QuarkLang Assembly file (`.qas`) into a QuarkLang Compiled Executable (`.qce`) file, run `quarki` with a file argument:
 
 ```sh
 $ quarki -f <source.qas>
@@ -70,7 +67,7 @@ $ quarki -f <source.qas>
 $ quarki --file <source.qas>
 ```
 
-- To run a QuarkLang Compiled Executable (`.qce`) file, run the following command:
+- To run a QuarkLang Compiled Executable (`.qce`) file, run `quarkc` with a file argument:
 
 ```sh
 $ quarkc -f <output.qce>
@@ -91,13 +88,8 @@ $ quarkc --debug -f <source.qas>
 
 ## Examples
 
-### Fibonacci
+Check the [examples](./examples) folder for examples.
 
-```x86asm
-put 0
-put 1
-dup 1
-dup 1
-plus
-jmp 2
-```
+## License
+
+Licensed under the [MIT](https://opensource.org/licenses/MIT) license.

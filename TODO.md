@@ -1,6 +1,7 @@
 # TODO
 
 - Comments
+- Functions
 
 - Bitwise operations
   - And
@@ -9,9 +10,6 @@
   - Bit Shifts
     - Left
     - Right
-
-- Strings
-- Functions
 
 - Syntax highlighting
   - Vim

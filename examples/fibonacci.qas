@@ -1,6 +1,12 @@
-put 0
-put 1
-dup 1
-dup 1
-plus
-jmp 2
+-- Copyright 2022-Present Siddharth Praveen Bharadwaj
+-- https://sid110307.github.io/Sid110307
+--
+-- QuarkLang Assembly program for Fibonacci sequence
+
+put 0  -- Push 0 onto the stack
+put 1  -- Push 1 onto the stack
+dup 1  -- Duplicate the topmost element
+dup 1  -- Duplicate the topmost element
+plus   -- Add the topmost two elements
+jmp 2  -- Jump to the second instruction
+print  -- Print the topmost element

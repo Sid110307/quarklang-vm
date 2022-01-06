@@ -7,11 +7,11 @@
 " autocmd BufRead,BufNewFile *.qas set filetype=qas
 
 if exists("b:current_syntax")
-  finish
+	finish
 endif
 
 syntax keyword quarkVMTodos TODO XXX FIXME NOTE HACK BUG
-syntax keyword quarkVMKeywords put kaput dup jmp jif stop
+syntax keyword quarkVMKeywords put kaput dup jmp jif stop print
 syntax keyword quarkVMOperators plus minus mul div mod eq lt gt le ge
 
 syntax match quarkVMNumeric "[0-9]\+$"
