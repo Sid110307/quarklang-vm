@@ -1,8 +1,5 @@
 # TODO
 
-- Comments
-- Functions
-
 - Bitwise operations
   - And
   - Or
@@ -12,7 +9,6 @@
     - Right
 
 - Syntax highlighting
-  - Vim
   - Emacs
   - Intellij/Jetbrains IDE
   - Sublime Text

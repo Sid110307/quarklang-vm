@@ -4,13 +4,17 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
 
-#define VM_STACK_SIZE 524288
-#define VM_PROGRAM_SIZE 1024
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define VM_STACK_CAPACITY 1048576
+#define ARRAY_CAPACITY(x) (sizeof(x) / sizeof((x)[0]))
+
+#define VM_PROGRAM_CAPACITY 1024
+#define VM_FUNCTION_CAPACITY 1024
+#define VM_DELAYED_OPERANDS_CAPACITY 1024
 
 int VM_EXECUTION_LIMIT = 64;
 
@@ -60,10 +64,10 @@ typedef struct
 
 typedef struct
 {
-	Word stack[VM_STACK_SIZE];
+	Word stack[VM_STACK_CAPACITY];
 	Word stackSize;
 
-	Instruction program[VM_PROGRAM_SIZE];
+	Instruction program[VM_PROGRAM_CAPACITY];
 	Word programSize;
 	Word instructionPointer;
 
@@ -71,7 +75,6 @@ typedef struct
 } QuarkVM;
 
 // TODO: Replace instruction macros with functions
-
 #define PUT_INSTRUCTION(val) { .type = INST_PUT, .value = val }
 #define DUP_INSTRUCTION(addr) { .type = INST_DUP, .value = addr }
 #define ADD_INSTRUCTION { .type = INST_ADD }
@@ -112,8 +115,33 @@ int sv_equals(StringView a, StringView b);
 int sv_toInt(StringView sv);
 StringView sv_readFile(const char* filePath);
 
-Instruction vmParseLine(StringView line);
-size_t vmParseSource(StringView source, Instruction* program, size_t programCapacity);
+typedef struct
+{
+	StringView label;
+	Word address;
+} Function;
+
+typedef struct
+{
+	Word address;
+	StringView label;
+} DelayedOperand;
+
+typedef struct
+{
+	Function functions[VM_FUNCTION_CAPACITY];
+	size_t functionSize;
+	DelayedOperand delayedOperands[VM_DELAYED_OPERANDS_CAPACITY];
+	size_t delayedOperandSize;
+} VMTable;
+
+// TODO: Declare vmTableContains
+// int vmTableContains(const VMTable* table, StringView label);
+Word vmTableFindAddress(const VMTable* table, StringView label);
+void vmTablePushFunction(VMTable* table, StringView label, Word address);
+void vmTablePushDelayedOperand(VMTable* table, Word address, StringView label);
+
+void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable);
 
 #endif // QUARK_VM_COMPILER_H_
 #ifdef QUARK_VM_COMPILER_IMPLEMENTATION
@@ -171,13 +199,13 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 		++vm->instructionPointer;
 		break;
 	case INST_PUT:
-		if (vm->stackSize >= VM_STACK_SIZE) return EX_STACK_OVERFLOW;
+		if (vm->stackSize >= VM_STACK_CAPACITY) return EX_STACK_OVERFLOW;
 
 		vm->stack[vm->stackSize++] = instruction.value;
 		++vm->instructionPointer;
 		break;
 	case INST_DUP:
-		if (vm->stackSize >= VM_STACK_SIZE) return EX_STACK_OVERFLOW;
+		if (vm->stackSize >= VM_STACK_CAPACITY) return EX_STACK_OVERFLOW;
 		if (vm->stackSize - instruction.value <= 0) return EX_STACK_UNDERFLOW;
 		if (instruction.value < 0) return EX_ILLEGAL_OPERATION;
 
@@ -378,11 +406,10 @@ void vmDumpStack(FILE* stream, const QuarkVM* quarkVm)
 
 void vmLoadProgramFromMemory(QuarkVM* quarkVm, Instruction* program, size_t programSize)
 {
-	assert(programSize <= VM_PROGRAM_SIZE);
+	assert(programSize <= VM_PROGRAM_CAPACITY);
 	memcpy(quarkVm->program, program, sizeof(program[0]) * programSize);
 
 	quarkVm->programSize = programSize;
-	// quarkVm->instructionPointer = quarkVm->program;
 }
 
 void vmLoadProgramFromFile(QuarkVM* quarkVm, const char* filePath)
@@ -409,7 +436,7 @@ void vmLoadProgramFromFile(QuarkVM* quarkVm, const char* filePath)
 	}
 
 	assert(fileSize % sizeof(quarkVm->program[0]) == 0);
-	assert((size_t)fileSize <= VM_PROGRAM_SIZE * sizeof(quarkVm->program[0]));
+	assert((size_t)fileSize <= VM_PROGRAM_CAPACITY * sizeof(quarkVm->program[0]));
 
 	if (fseek(file, 0, SEEK_SET) < 0)
 	{
@@ -579,141 +606,167 @@ StringView sv_readFile(const char* filePath)
 	};
 }
 
-Instruction vmParseLine(StringView line)
+// TODO: Implement vmTableContains
+// int vmTableContains(const VMTable* table, StringView label)
+// {
+	// return -1;
+// }
+
+Word vmTableFindAddress(const VMTable* table, StringView label)
 {
-	line = sv_trimStart(line);
-	StringView instructionName = sv_trimByDelimeter(&line, ' ');
+	for (size_t i = 0; i < table->functionSize; ++i)
+		if (sv_equals(table->functions[i].label, label))
+			return table->functions[i].address;
 
-	if (sv_equals(instructionName, sv_cstrAsStringView("put")))
-	{
-		line = sv_trimStart(line);
-		int operand = sv_toInt(sv_trimEnd(line));
-
-		return (Instruction)
-		{
-			.type = INST_PUT,
-				.value = operand,
-		};
-	}
-	else if (sv_equals(instructionName, sv_cstrAsStringView("kaput")))
-		return (Instruction)
-	{
-		.type = INST_KAPUT,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("dup")))
-	{
-		line = sv_trimStart(line);
-		int operand = sv_toInt(sv_trimEnd(line));
-
-		return (Instruction)
-		{
-			.type = INST_DUP,
-				.value = operand,
-		};
-	}
-	else if (sv_equals(instructionName, sv_cstrAsStringView("plus")))
-		return (Instruction)
-	{
-		.type = INST_ADD,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("minus")))
-		return(Instruction)
-	{
-		.type = INST_SUB,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("mul")))
-		return(Instruction)
-	{
-		.type = INST_MUL,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("div")))
-		return(Instruction)
-	{
-		.type = INST_DIV,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("mod")))
-		return(Instruction)
-	{
-		.type = INST_MOD,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("jmp")))
-	{
-		line = sv_trimStart(line);
-		int operand = sv_toInt(sv_trimEnd(line));
-
-		return (Instruction)
-		{
-			.type = INST_JUMP,
-				.value = operand,
-		};
-	}
-	else if (sv_equals(instructionName, sv_cstrAsStringView("jif")))
-	{
-		line = sv_trimStart(line);
-		int operand = sv_toInt(sv_trimEnd(line));
-
-		return (Instruction)
-		{
-			.type = INST_JUMP_IF,
-				.value = operand,
-		};
-	}
-	else if (sv_equals(instructionName, sv_cstrAsStringView("eq")))
-		return (Instruction)
-	{
-		.type = INST_EQ,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("gt")))
-		return (Instruction)
-	{
-		.type = INST_GT,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("lt")))
-		return (Instruction)
-	{
-		.type = INST_LT,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("ge")))
-		return (Instruction)
-	{
-		.type = INST_GEQ,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("le")))
-		return (Instruction)
-	{
-		.type = INST_LEQ,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("stop")))
-		return (Instruction)
-	{
-		.type = INST_HALT,
-	};
-	else if (sv_equals(instructionName, sv_cstrAsStringView("print")))
-		return (Instruction)
-	{
-		.type = INST_PRINT_DEBUG,
-	};
-	else
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Invalid instruction '%.*s'\n", (int)instructionName.count, instructionName.data);
-		exit(EXIT_FAILURE);
-	}
+	fprintf(stderr, "[\033[1;31mERROR\033[0m]: Function '%.*s' does not exist.\n", (int)label.count, label.data);
+	exit(EXIT_FAILURE);
 }
 
-size_t vmParseSource(StringView source, Instruction* program, size_t programCapacity)
+void vmTablePushFunction(VMTable* table, StringView label, Word address)
 {
-	size_t programSize = 0;
+	assert(table->functionSize < VM_FUNCTION_CAPACITY);
+	table->functions[table->functionSize++] = (Function)
+	{
+		.label = label,
+			.address = address,
+	};
+}
+
+void vmTablePushDelayedOperand(VMTable* table, Word address, StringView label)
+{
+	assert(table->delayedOperandSize < VM_DELAYED_OPERANDS_CAPACITY);
+	table->delayedOperands[table->delayedOperandSize++] = (DelayedOperand)
+	{
+		.address = address,
+			.label = label,
+	};
+}
+
+void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
+{
+	vm->programSize = 0;
 
 	while (source.count > 0)
 	{
-		assert(programSize < programCapacity);
+		assert(vm->programSize < VM_PROGRAM_CAPACITY);
 		StringView line = sv_trim(sv_trimByDelimeter(&source, '\n'));
 
 		if (line.count > 0 && !(line.data[0] == '-' && line.data[1] == '-'))
-			program[programSize++] = vmParseLine(line);
+		{
+			StringView instructionName = sv_trimByDelimeter(&line, ' ');
+			StringView operand = sv_trim(sv_trimByDelimeter(&line, '-'));
+
+			if (instructionName.count > 0 && instructionName.data[instructionName.count - 1] == ':')
+			{
+				StringView function =
+				{
+					.count = instructionName.count - 1,
+						.data = instructionName.data,
+				};
+
+				vmTablePushFunction(vmTable, function, vm->programSize);
+			}
+			else if (sv_equals(instructionName, sv_cstrAsStringView("put")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_PUT,
+					.value = sv_toInt(operand),
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("kaput")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_KAPUT,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("dup")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_DUP,
+					.value = sv_toInt(operand),
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("plus")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_ADD,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("minus")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_SUB,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("mul")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_MUL,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("div")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_DIV,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("mod")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_MOD,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("jmp")))
+			{
+				vmTablePushDelayedOperand(vmTable, vm->programSize, operand);
+				vm->program[vm->programSize++] = (Instruction)
+				{
+					.type = INST_JUMP,
+				};
+			}
+			else if (sv_equals(instructionName, sv_cstrAsStringView("jif")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_JUMP_IF,
+					.value = sv_toInt(operand),
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("eq")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_EQ,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("gt")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_GT,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("lt")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_LT,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("ge")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_GEQ,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("le")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_LEQ,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("stop")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_HALT,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView("print")))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_PRINT_DEBUG,
+			};
+			else
+			{
+				fprintf(stderr, "[\033[1;31mERROR\033[0m]: Invalid instruction '%.*s'\n", (int)instructionName.count, instructionName.data);
+				exit(EXIT_FAILURE);
+			}
+		}
 	}
 
-	return programSize;
+	for (size_t i = 0; i < vmTable->delayedOperandSize; ++i)
+		vm->program[vmTable->delayedOperands[i].address].value = vmTableFindAddress(vmTable, vmTable->delayedOperands[i].label);
 }
 
 #endif

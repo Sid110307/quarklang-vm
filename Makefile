@@ -1,13 +1,14 @@
-CFLAGS=-Wall -Wextra -std=c11 -pedantic
+CFLAGS=-std=c11 -pedantic -Wall -Wextra -Wmissing-prototypes
 LIBS=
 
 EXAMPLES=examples/fibonacci.qce
 
 .PHONY: all
-all: interpreter compiler disassembler
+all: clean interpreter compiler disassembler
 
 help:
-	@echo "\033[1mUsage\033[0m: make <target> [-s | --silent]\n"
+	@echo "\033[1mUsage\033[0m: make <target> [-s | --silent]"
+	@echo "\033[1mRun with -s or --silent to hide the output (\033[0;34mRECOMMENDED\033[0m)\033[0m\n"
 	@echo "Available targets:"
 	@echo "\033[1;36m  all\033[0m: Compile all targets."
 	@echo "\033[1;36m  interpreter\033[0m: Build the interpreter."
@@ -20,19 +21,19 @@ help:
 	@echo "\033[1;36m  ext-install\033[0m: Install the extensions/plugins for an editor."
 	@echo "\033[1;36m  help\033[0m: Show this help message and exit."
 
-interpreter: src/quarki.c src/compiler.h
+interpreter: src/quarki.c src/include/compiler.h
 	@echo -n "\033[1;36mBuilding interpreter... \033[0m"
 	sudo mkdir -p bin
 	sudo $(CC) $(CFLAGS) -o bin/quarki $< $(LIBS)
 	@echo "\033[1;32mDone.\033[0m"
 
-compiler: src/quarkc.c src/compiler.h
+compiler: src/quarkc.c src/include/compiler.h
 	@echo -n "\033[1;36mBuilding compiler... \033[0m"
 	sudo mkdir -p bin
 	sudo $(CC) $(CFLAGS) -o bin/quarkc $< $(LIBS)
 	@echo "\033[1;32mDone.\033[0m"
 
-disassembler: src/unquark.c src/compiler.h
+disassembler: src/unquark.c src/include/compiler.h
 	@echo -n "\033[1;36mBuilding disassembler... \033[0m"
 	sudo mkdir -p bin
 	sudo $(CC) $(CFLAGS) -o bin/unquark $< $(LIBS)

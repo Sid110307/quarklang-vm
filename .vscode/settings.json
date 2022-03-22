@@ -6,5 +6,18 @@
 		"**/.idea": true,
 		"**/node_modules": true,
 		"**/*.vsix": true
+	},
+	"files.associations": {
+		"*.asm": "asm-intel-x86-generic",
+		"*.ast": "json",
+		"*.quark": "ruby",
+		"*.s": "arm",
+		"*.h": "cpp",
+		"README": "markdown",
+		"*.txt": "plaintext",
+		"*.log": "log",
+		"*.vbox": "code-text-binary",
+		"*.vbox-prev": "code-text-binary",
+		"typeinfo": "c"
 	}
 }

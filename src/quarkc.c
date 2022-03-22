@@ -1,5 +1,5 @@
 #define QUARK_VM_COMPILER_IMPLEMENTATION
-#include "compiler.h"
+#include "include/compiler.h"
 
 int main(int argc, char** argv)
 {
@@ -10,7 +10,17 @@ int main(int argc, char** argv)
 	{
 		for (int i = 1; i < argc; i++)
 		{
-			if (strcmp(argv[i], "--limit") == 0 || strcmp(argv[i], "-l") == 0) VM_EXECUTION_LIMIT = atoi(argv[++i]);
+			if (strcmp(argv[i], "--limit") == 0 || strcmp(argv[i], "-l") == 0)
+			{
+				if (argv[++i] == NULL)
+				{
+					printf("[\033[1;34mINFO\033[0m]: Current limit: %d\n", VM_EXECUTION_LIMIT);
+					printf("[\033[1;34mINFO\033[0m]: Change the limit with --limit <number> or -l <number>.\n");
+					exit(EXIT_FAILURE);
+				}
+
+				VM_EXECUTION_LIMIT = atoi(argv[i]);
+			}
 			else if (strcmp(argv[i], "--print-ops") == 0 || strcmp(argv[i], "-p") == 0)
 				printOps = 1;
 			else if (strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0)

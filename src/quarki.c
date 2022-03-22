@@ -1,5 +1,7 @@
 #define QUARK_VM_COMPILER_IMPLEMENTATION
-#include "compiler.h"
+#include "include/compiler.h"
+
+VMTable table = { 0 };
 
 int main(int argc, char** argv)
 {
@@ -34,7 +36,7 @@ int main(int argc, char** argv)
 				strcat(outputFilePath, ".qce");
 
 				StringView source = sv_readFile(inputFilePath);
-				quarkVm.programSize = vmParseSource(source, quarkVm.program, VM_PROGRAM_SIZE);
+				vmParseSource(source, &quarkVm, &table);
 
 				vmSaveProgramToFile(&quarkVm, outputFilePath);
 				printf("[\033[1;34mINFO\033[0m]: Program compiled to '%s'.\n", outputFilePath);
