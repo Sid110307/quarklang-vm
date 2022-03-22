@@ -14,17 +14,17 @@ https://github.com/Sid110307/quarklang-vm/actions/workflows/makefile.yml/badge.s
 
   - Git Clone via HTTPS:
 
-        ```sh
-        $ git clone https://github.com/Sid110307/quarklang-vm.git
-        # Cloning into 'quarklang-vm'...
-        ```
+      ```sh
+      $ git clone https://github.com/Sid110307/quarklang-vm.git
+      # Cloning into 'quarklang-vm'...
+      ```
 
   - GitHub CLI:
 
-        ```sh
-        $ gh repo clone Sid110307/quarklang-vm
-        # Cloning into 'quarklang-vm'...
-        ```
+      ```sh
+      $ gh repo clone Sid110307/quarklang-vm
+      # Cloning into 'quarklang-vm'...
+      ```
 
 - Enter the directory:
 
@@ -88,7 +88,7 @@ $ quarkc --debug -f <source.qas>
 
 ## Examples
 
-Check the [examples](./examples) folder for examples.
+Check the [examples](https://github.com/Sid110307/quarklang-vm/tree/master/examples) folder for examples.
 
 ## License
 
