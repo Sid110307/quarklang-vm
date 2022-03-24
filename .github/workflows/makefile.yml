@@ -13,10 +13,7 @@ jobs:
         steps:
             - uses: actions/checkout@v2
 
-            - name: Clean Binaries
-              run: make clean -s
-
-            - name: Build Binaries
+            - name: Clean and Build Binaries
               run: make -s
 
             - name: Compile Examples
