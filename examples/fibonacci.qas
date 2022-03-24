@@ -3,6 +3,12 @@
 --
 -- QuarkLang Assembly program for Fibonacci sequence
 
+-- Unwanted code to test function label resolution
+jmp 1
+kaput
+kaput
+kaput
+
 -- First two numbers
 put 0
 put 1
