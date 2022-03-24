@@ -62,6 +62,14 @@ typedef struct
 	Word value;
 } Instruction;
 
+union Word
+{
+	int64_t asS64;
+	uint64_t asU64;
+	double asF64;
+	void* asPtr;
+};
+
 typedef struct
 {
 	Word stack[VM_STACK_CAPACITY];

@@ -1,15 +1,12 @@
 # TODO
 
+- Preprocessor
+
 - Bitwise operations
-  - And
-  - Or
-  - Not
-  - Bit Shifts
-    - Left
-    - Right
+
+- Individual instructions for floating-point arithmetic
 
 - Syntax highlighting
-  - Emacs
   - Intellij/Jetbrains IDE
   - Sublime Text
   - Atom
