@@ -18,6 +18,8 @@
 		"*.log": "log",
 		"*.vbox": "code-text-binary",
 		"*.vbox-prev": "code-text-binary",
-		"typeinfo": "c"
+		"typeinfo": "c",
+		"type_traits": "c",
+		"compare": "c"
 	}
 }

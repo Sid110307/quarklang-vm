@@ -435,7 +435,7 @@ void vmLoadProgramFromFile(QuarkVM* quarkVm, const char* filePath)
 		exit(EXIT_FAILURE);
 	}
 
-	assert(fileSize % sizeof(quarkVm->program[0]) == 0);
+	assert((fileSize % sizeof(quarkVm->program[0]) == 0) && "Unrecognized bytecode");
 	assert((size_t)fileSize <= VM_PROGRAM_CAPACITY * sizeof(quarkVm->program[0]));
 
 	if (fseek(file, 0, SEEK_SET) < 0)

@@ -4,16 +4,17 @@ LIBS=
 EXAMPLES=examples/fibonacci.qce
 
 .PHONY: all
-all: clean interpreter compiler disassembler
+all: clean interpreter compiler disassembler nanboxer
 
 help:
 	@echo "\033[1mUsage\033[0m: make <target> [-s | --silent]"
-	@echo "\033[1mRun with -s or --silent to hide the output (\033[0;34mRECOMMENDED\033[0m)\033[0m\n"
+	@echo "\033[1mRun with -s or --silent to hide the output commands (\033[0;34mRECOMMENDED\033[0m)\033[0m\n"
 	@echo "Available targets:"
 	@echo "\033[1;36m  all\033[0m: Compile all targets."
 	@echo "\033[1;36m  interpreter\033[0m: Build the interpreter."
 	@echo "\033[1;36m  compiler\033[0m: Build the compiler."
 	@echo "\033[1;36m  disassembler\033[0m: Build the disassembler."
+	@echo "\033[1;36m  nanboxer\033[0m: Build the NaN boxer."
 	@echo "\033[1;36m  examples\033[0m: Compile examples."
 	@echo "\033[1;36m  clean\033[0m: Remove all compiled files (\033[1;31mWARNING\033[0m: This will also remove the interpreter and compiler binaries, if installed previously)."
 	@echo "\033[1;36m  install\033[0m: Install the binaries to the system."
@@ -39,6 +40,12 @@ disassembler: src/unquark.c src/include/compiler.h
 	sudo $(CC) $(CFLAGS) -o bin/unquark $< $(LIBS)
 	@echo "\033[1;32mDone.\033[0m"
 
+nanboxer: src/nanbox.c src/include/compiler.h
+	@echo -n "\033[1;36mBuilding NaN boxer... \033[0m"
+	sudo mkdir -p bin
+	sudo $(CC) $(CFLAGS) -o bin/nanbox $< $(LIBS)
+	@echo "\033[1;32mDone.\033[0m"
+
 .PHONY: examples
 examples: $(EXAMPLES)
 
@@ -52,6 +59,7 @@ install:
 	sudo cp bin/quarki /usr/local/quark/quarki
 	sudo cp bin/quarkc /usr/local/quark/quarkc
 	sudo cp bin/unquark /usr/local/quark/unquark
+	sudo cp bin/nanbox /usr/local/quark/nanbox
 
 	if ! grep -q 'export PATH="/usr/local/quark:$$PATH"' $(HOME)/.bashrc; then\
 		sudo echo '# add quarklang vm to PATH' >> $(HOME)/.bashrc;\
@@ -68,6 +76,7 @@ install-user:
 	sudo cp bin/quarki $(HOME)/.local/share/quark/quarki
 	sudo cp bin/quarkc $(HOME)/.local/share/quark/quarkc
 	sudo cp bin/unquark $(HOME)/.local/share/quark/unquark
+	sudo cp bin/nanbox $(HOME)/.local/share/quark/nanbox
 
 	if ! grep -q 'export PATH="$(HOME)/.local/share/quark:$$PATH"' $(HOME)/.bashrc; then\
 		sudo echo '# add quarklang vm to PATH' >> $(HOME)/.bashrc;\
