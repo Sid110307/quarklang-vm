@@ -4,8 +4,6 @@
 
 - Bitwise operations
 
-- Individual instructions for floating-point arithmetic
-
 - Syntax highlighting
   - Intellij/Jetbrains IDE
   - Sublime Text

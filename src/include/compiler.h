@@ -31,8 +31,6 @@ typedef enum
 
 const char* exceptionAsCstr(Exception exception);
 
-typedef signed long int Word;
-
 typedef enum
 {
 	INST_KAPUT = 0,
@@ -56,28 +54,32 @@ typedef enum
 
 const char* instructionTypeAsCstr(InstructionType type);
 
+typedef uint64_t InstructionAddress;
+
+typedef union
+{
+	InstructionAddress asU64;
+	int64_t asI64;
+	double asF64;
+	void* asPtr;
+} Word;
+
+static_assert(sizeof(Word) == 8, "The virtual machine's word size must be 64 bytes.");
+
 typedef struct
 {
 	InstructionType type;
 	Word value;
 } Instruction;
 
-union Word
-{
-	int64_t asS64;
-	uint64_t asU64;
-	double asF64;
-	void* asPtr;
-};
-
 typedef struct
 {
 	Word stack[VM_STACK_CAPACITY];
-	Word stackSize;
+	InstructionAddress stackSize;
 
 	Instruction program[VM_PROGRAM_CAPACITY];
-	Word programSize;
-	Word instructionPointer;
+	InstructionAddress programSize;
+	InstructionAddress instructionPointer;
 
 	int halt;
 } QuarkVM;
@@ -126,12 +128,12 @@ StringView sv_readFile(const char* filePath);
 typedef struct
 {
 	StringView label;
-	Word address;
+	InstructionAddress address;
 } Function;
 
 typedef struct
 {
-	Word address;
+	InstructionAddress address;
 	StringView label;
 } DelayedOperand;
 
@@ -143,11 +145,9 @@ typedef struct
 	size_t delayedOperandSize;
 } VMTable;
 
-// TODO: Declare vmTableContains
-// int vmTableContains(const VMTable* table, StringView label);
-Word vmTableFindAddress(const VMTable* table, StringView label);
-void vmTablePushFunction(VMTable* table, StringView label, Word address);
-void vmTablePushDelayedOperand(VMTable* table, Word address, StringView label);
+InstructionAddress vmTableFindAddress(const VMTable* table, StringView label);
+void vmTablePushFunction(VMTable* table, StringView label, InstructionAddress address);
+void vmTablePushDelayedOperand(VMTable* table, InstructionAddress address, StringView label);
 
 void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable);
 
@@ -196,7 +196,7 @@ const char* instructionTypeAsCstr(InstructionType type)
 
 Exception vmExecuteInstruction(QuarkVM* vm)
 {
-	if (vm->instructionPointer < 0 || vm->instructionPointer >= vm->programSize)
+	if (vm->instructionPointer >= vm->programSize)
 		return EX_ILLEGAL_INSTRUCTION_ACCESS;
 
 	Instruction instruction = vm->program[vm->instructionPointer];
@@ -214,59 +214,58 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 		break;
 	case INST_DUP:
 		if (vm->stackSize >= VM_STACK_CAPACITY) return EX_STACK_OVERFLOW;
-		if (vm->stackSize - instruction.value <= 0) return EX_STACK_UNDERFLOW;
-		if (instruction.value < 0) return EX_ILLEGAL_OPERATION;
+		if (vm->stackSize - instruction.value.asU64 <= 0) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize] = vm->stack[vm->stackSize - 1 - instruction.value];
+		vm->stack[vm->stackSize] = vm->stack[vm->stackSize - 1 - instruction.value.asU64];
 		++vm->stackSize;
 		++vm->instructionPointer;
 		break;
 	case INST_ADD:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2] += vm->stack[vm->stackSize - 1];
+		vm->stack[vm->stackSize - 2].asU64 += vm->stack[vm->stackSize - 1].asU64;
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
 	case INST_SUB:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2] -= vm->stack[vm->stackSize - 1];
+		vm->stack[vm->stackSize - 2].asU64 -= vm->stack[vm->stackSize - 1].asU64;
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
 	case INST_MUL:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2] *= vm->stack[vm->stackSize - 1];
+		vm->stack[vm->stackSize - 2].asU64 *= vm->stack[vm->stackSize - 1].asU64;
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
 	case INST_DIV:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
-		if (vm->stack[vm->stackSize - 1] == 0) return EX_DIVIDE_BY_ZERO;
+		if (vm->stack[vm->stackSize - 1].asU64 == 0) return EX_DIVIDE_BY_ZERO;
 
-		vm->stack[vm->stackSize - 2] /= vm->stack[vm->stackSize - 1];
+		vm->stack[vm->stackSize - 2].asU64 /= vm->stack[vm->stackSize - 1].asU64;
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
 	case INST_MOD:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2] %= vm->stack[vm->stackSize - 1];
+		vm->stack[vm->stackSize - 2].asU64 %= vm->stack[vm->stackSize - 1].asU64;
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
 	case INST_JUMP:
-		vm->instructionPointer = instruction.value;
+		vm->instructionPointer = instruction.value.asU64;
 		break;
 	case INST_JUMP_IF:
 		if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
 
-		if (vm->stack[vm->stackSize - 1])
+		if (vm->stack[vm->stackSize - 1].asU64)
 		{
 			vm->stackSize--;
-			vm->instructionPointer = instruction.value;
+			vm->instructionPointer = instruction.value.asU64;
 		}
 		else vm->instructionPointer++;
 
@@ -274,35 +273,35 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 	case INST_EQ:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2] = (vm->stack[vm->stackSize - 2] == vm->stack[vm->stackSize - 1]);
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 2].asU64 == vm->stack[vm->stackSize - 1].asU64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
 	case INST_GT:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2] = (vm->stack[vm->stackSize - 2] > vm->stack[vm->stackSize - 1]);
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 2].asU64 > vm->stack[vm->stackSize - 1].asU64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
 	case INST_LT:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2] = (vm->stack[vm->stackSize - 2] < vm->stack[vm->stackSize - 1]);
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 2].asU64 < vm->stack[vm->stackSize - 1].asU64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
 	case INST_GEQ:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2] = (vm->stack[vm->stackSize - 2] >= vm->stack[vm->stackSize - 1]);
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 2].asU64 >= vm->stack[vm->stackSize - 1].asU64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
 	case INST_LEQ:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2] = (vm->stack[vm->stackSize - 2] <= vm->stack[vm->stackSize - 1]);
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 2].asU64 <= vm->stack[vm->stackSize - 1].asU64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
@@ -312,7 +311,7 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 	case INST_PRINT_DEBUG:
 		if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
 
-		printf("%ld\n", vm->stack[vm->stackSize - 1]);
+		printf("%lu\n", vm->stack[vm->stackSize - 1].asU64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
@@ -344,7 +343,7 @@ Exception vmExecuteProgram(QuarkVM* vm, int limit, int printOps, int debug)
 				quarkVm.program[i].type == INST_DUP ||
 				quarkVm.program[i].type == INST_JUMP ||
 				quarkVm.program[i].type == INST_JUMP_IF)
-				printf("  Value: %ld\n", quarkVm.program[i].value);
+				printf("  Value: %ld\n", quarkVm.program[i].value.asU64);
 		}
 
 		if (debug)
@@ -406,8 +405,8 @@ void vmDumpStack(FILE* stream, const QuarkVM* quarkVm)
 	if (quarkVm->stackSize > 0)
 	{
 		fprintf(stream, "\n");
-		for (Word i = 0; i < quarkVm->stackSize; ++i)
-			fprintf(stream, "  %ld\n", quarkVm->stack[i]);
+		for (InstructionAddress i = 0; i < quarkVm->stackSize; ++i)
+			fprintf(stream, "  U64: %lu, I64: %ld, F64: %lf, PTR: %p\n", quarkVm->stack[i].asU64, quarkVm->stack[i].asI64, quarkVm->stack[i].asF64, quarkVm->stack[i].asPtr);
 	}
 	else fprintf(stream, " [empty]\n");
 }
@@ -614,13 +613,7 @@ StringView sv_readFile(const char* filePath)
 	};
 }
 
-// TODO: Implement vmTableContains
-// int vmTableContains(const VMTable* table, StringView label)
-// {
-	// return -1;
-// }
-
-Word vmTableFindAddress(const VMTable* table, StringView label)
+InstructionAddress vmTableFindAddress(const VMTable* table, StringView label)
 {
 	for (size_t i = 0; i < table->functionSize; ++i)
 		if (sv_equals(table->functions[i].label, label))
@@ -630,7 +623,7 @@ Word vmTableFindAddress(const VMTable* table, StringView label)
 	exit(EXIT_FAILURE);
 }
 
-void vmTablePushFunction(VMTable* table, StringView label, Word address)
+void vmTablePushFunction(VMTable* table, StringView label, InstructionAddress address)
 {
 	assert(table->functionSize < VM_FUNCTION_CAPACITY);
 	table->functions[table->functionSize++] = (Function)
@@ -640,7 +633,7 @@ void vmTablePushFunction(VMTable* table, StringView label, Word address)
 	};
 }
 
-void vmTablePushDelayedOperand(VMTable* table, Word address, StringView label)
+void vmTablePushDelayedOperand(VMTable* table, InstructionAddress address, StringView label)
 {
 	assert(table->delayedOperandSize < VM_DELAYED_OPERANDS_CAPACITY);
 	table->delayedOperands[table->delayedOperandSize++] = (DelayedOperand)
@@ -678,7 +671,10 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_PUT,
-					.value = sv_toInt(operand),
+				.value =
+					{
+						.asI64 = sv_toInt(operand)
+					},
 			};
 			else if (sv_equals(instructionName, sv_cstrAsStringView("kaput")))
 				vm->program[vm->programSize++] = (Instruction)
@@ -689,7 +685,10 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_DUP,
-					.value = sv_toInt(operand),
+				.value =
+					{
+						.asI64 = sv_toInt(operand)
+					},
 			};
 			else if (sv_equals(instructionName, sv_cstrAsStringView("plus")))
 				vm->program[vm->programSize++] = (Instruction)
@@ -728,7 +727,10 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_JUMP_IF,
-					.value = sv_toInt(operand),
+				.value =
+					{
+						.asI64 = sv_toInt(operand)
+					},
 			};
 			else if (sv_equals(instructionName, sv_cstrAsStringView("eq")))
 				vm->program[vm->programSize++] = (Instruction)
@@ -774,7 +776,7 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 	}
 
 	for (size_t i = 0; i < vmTable->delayedOperandSize; ++i)
-		vm->program[vmTable->delayedOperands[i].address].value = vmTableFindAddress(vmTable, vmTable->delayedOperands[i].label);
+		vm->program[vmTable->delayedOperands[i].address].value.asU64 = (InstructionAddress)vmTableFindAddress(vmTable, vmTable->delayedOperands[i].label);
 }
 
 #endif

@@ -1,7 +1,7 @@
 CFLAGS=-std=c11 -pedantic -Wall -Wextra -Wmissing-prototypes
 LIBS=
 
-EXAMPLES=examples/fibonacci.qce
+EXAMPLES=examples/fibonacci.qce examples/123.qce
 
 .PHONY: all
 all: clean interpreter compiler disassembler nanboxer
@@ -50,7 +50,9 @@ nanboxer: src/nanbox.c src/include/compiler.h
 examples: $(EXAMPLES)
 
 examples/%.qce: interpreter examples/%.qas
+	@echo -n "\033[1;36mBuilding example \033[0m$(word 2, $^)\033[1;36m...\033[0m\n"
 	./bin/quarki -f $(word 2, $^)
+	./bin/quarkc -f $@
 
 install:
 	@echo -n "\033[1;36mInstalling binaries... \033[0m"

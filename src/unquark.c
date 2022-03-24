@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 
 			vmLoadProgramFromFile(&vm, inputFilePath);
 
-			for (Word j = 0; j < vm.programSize; ++j)
+			for (InstructionAddress j = 0; j < vm.programSize; ++j)
 			{
 				switch (vm.program[j].type)
 				{
@@ -39,46 +39,46 @@ int main(int argc, char** argv)
 					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: kaput\n" : "kaput\n", j);
 					break;
 				case INST_PUT:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: put %ld\n" : "put %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: put %ld\n" : "put %ld\n", j, vm.program[j].value.asI64);
 					break;
 				case INST_DUP:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: dup %ld\n" : "dup %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: dup %ld\n" : "dup %ld\n", j, vm.program[j].value.asI64);
 					break;
 				case INST_ADD:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: plus %ld\n" : "plus %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: plus\n" : "plus\n", j);
 					break;
 				case INST_SUB:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: minus %ld\n" : "minus %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: minus\n" : "minus\n", j);
 					break;
 				case INST_MUL:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: mul %ld\n" : "mul %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: mul\n" : "mul\n", j);
 					break;
 				case INST_DIV:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: div %ld\n" : "div %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: div\n" : "div\n", j);
 					break;
 				case INST_MOD:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: mod %ld\n" : "mod %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: mod\n" : "mod\n", j);
 					break;
 				case INST_JUMP:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: jmp %ld\n" : "jmp %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: jmp %ld\n" : "jmp %ld\n", j, vm.program[j].value.asI64);
 					break;
 				case INST_JUMP_IF:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: jif %ld\n" : "jif %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: jif %ld\n" : "jif %ld\n", j, vm.program[j].value.asI64);
 					break;
 				case INST_EQ:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: eq %ld\n" : "eq %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: eq\n" : "eq\n", j);
 					break;
 				case INST_GT:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: gt %ld\n" : "gt %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: gt\n" : "gt\n", j);
 					break;
 				case INST_LT:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: lt %ld\n" : "lt %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: lt\n" : "lt\n", j);
 					break;
 				case INST_GEQ:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: ge %ld\n" : "ge %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: ge\n" : "ge\n", j);
 					break;
 				case INST_LEQ:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: le %ld\n" : "le %ld\n", j, vm.program[j].value);
+					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: le\n" : "le\n", j);
 					break;
 				case INST_HALT:
 					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: stop\n" : "stop\n", j);
