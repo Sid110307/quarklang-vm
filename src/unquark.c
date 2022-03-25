@@ -33,63 +33,16 @@ int main(int argc, char** argv)
 
 			for (InstructionAddress j = 0; j < vm.programSize; ++j)
 			{
-				switch (vm.program[j].type)
-				{
-				case INST_KAPUT:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: kaput\n" : "kaput\n", j);
-					break;
-				case INST_PUT:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: put %ld\n" : "put %ld\n", j, vm.program[j].value.asI64);
-					break;
-				case INST_DUP:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: dup %ld\n" : "dup %ld\n", j, vm.program[j].value.asI64);
-					break;
-				case INST_ADD:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: plus\n" : "plus\n", j);
-					break;
-				case INST_SUB:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: minus\n" : "minus\n", j);
-					break;
-				case INST_MUL:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: mul\n" : "mul\n", j);
-					break;
-				case INST_DIV:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: div\n" : "div\n", j);
-					break;
-				case INST_MOD:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: mod\n" : "mod\n", j);
-					break;
-				case INST_JUMP:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: jmp %ld\n" : "jmp %ld\n", j, vm.program[j].value.asI64);
-					break;
-				case INST_JUMP_IF:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: jif %ld\n" : "jif %ld\n", j, vm.program[j].value.asI64);
-					break;
-				case INST_EQ:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: eq\n" : "eq\n", j);
-					break;
-				case INST_GT:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: gt\n" : "gt\n", j);
-					break;
-				case INST_LT:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: lt\n" : "lt\n", j);
-					break;
-				case INST_GEQ:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: ge\n" : "ge\n", j);
-					break;
-				case INST_LEQ:
-					printf(isRaw == false ? "Op \033[1;32m%ld\033[0m: le\n" : "le\n", j);
-					break;
-				case INST_HALT:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: stop\n" : "stop\n", j);
-					break;
-				case INST_PRINT_DEBUG:
-					printf(isRaw == false ? "Op \033[1;34m%ld\033[0m: print\n" : "print\n", j);
-					break;
-				default:
-					fprintf(stderr, "[\033[1;31mERROR\033[0m]: Unknown instruction type: %d\n", vm.program[j].type);
-					exit(EXIT_FAILURE);
-				}
+				if (!isRaw) printf("Op \033[1;34m%ld\033[0m: %s", j, instructionNames[vm.program[j].type]);
+				else printf("%s", instructionNames[vm.program[j].type]);
+
+				if (instructionWithOperand[vm.program[j].type])
+					printf(" %ld", vm.program[j].value.asI64);
+
+				printf("\n");
+
+				// fprintf(stderr, "[\033[1;31mERROR\033[0m]: Unknown instruction type: %d\n", vm.program[j].type);
+				// exit(EXIT_FAILURE);
 			}
 		}
 		else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)

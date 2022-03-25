@@ -9,8 +9,8 @@ put 2
 put 3
 
 -- Add the numbers
-plus
-plus
+iplus
+iplus
 
 -- Halt the execution
 stop

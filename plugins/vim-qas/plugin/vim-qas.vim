@@ -1,4 +1,4 @@
-" Vim syntax file
+" Vim/Neovim syntax file
 " Language: QuarkLang Assembly
 
 " Copyright 2021-Present Siddharth Praveen Bharadwaj
@@ -26,7 +26,7 @@
 " OTHER DEALINGS IN THE SOFTWARE.
 
 " Usage:
-" Put this file in .vim/syntax/qas.vim
+" Put this file in .vim/syntax/qas.vim (.config/nvim/syntax/qas.vim for Neovim)
 " and add the following line to your .vimrc:
 " autocmd BufRead,BufNewFile *.qas set filetype=qas
 
@@ -36,7 +36,7 @@ endif
 
 syntax keyword quarkVMTodos TODO XXX FIXME NOTE HACK BUG
 syntax keyword quarkVMKeywords put kaput dup jmp jif stop print
-syntax keyword quarkVMOperators plus minus mul div mod eq lt gt le ge
+syntax keyword quarkVMOperators iplus iminus imul idiv imod fplus fminus fmul fdiv fmod eq lt gt le ge
 
 syntax match quarkVMNumeric "[0-9]\+$"
 syntax match quarkVMFunction "\v[a-zA-Z0-9_]+\:$"

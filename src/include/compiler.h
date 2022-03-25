@@ -36,11 +36,16 @@ typedef enum
 	INST_KAPUT = 0,
 	INST_PUT,
 	INST_DUP,
-	INST_ADD,
-	INST_SUB,
-	INST_MUL,
-	INST_DIV,
-	INST_MOD,
+	INST_IPLUS,
+	INST_IMINUS,
+	INST_IMUL,
+	INST_IDIV,
+	INST_IMOD,
+	// INST_FPLUS,
+	// INST_FMINUS,
+	// INST_FMUL,
+	// INST_FDIV,
+	// INST_FMOD,
 	INST_JUMP,
 	INST_JUMP_IF,
 	INST_EQ,
@@ -51,6 +56,48 @@ typedef enum
 	INST_HALT,
 	INST_PRINT_DEBUG,
 } InstructionType;
+
+const char* const instructionNames[] =
+{
+	[INST_KAPUT] = "kaput",
+	[INST_PUT] = "put",
+	[INST_DUP] = "dup",
+	[INST_IPLUS] = "iplus",
+	[INST_IMINUS] = "iminus",
+	[INST_IMUL] = "imul",
+	[INST_IDIV] = "idiv",
+	[INST_IMOD] = "imod",
+	[INST_JUMP] = "jmp",
+	[INST_JUMP_IF] = "jif",
+	[INST_EQ] = "eq",
+	[INST_GT] = "gt",
+	[INST_LT] = "lt",
+	[INST_GEQ] = "ge",
+	[INST_LEQ] = "le",
+	[INST_HALT] = "stop",
+	[INST_PRINT_DEBUG] = "print",
+};
+
+const int instructionWithOperand[] =
+{
+	[INST_KAPUT] = 0,
+	[INST_PUT] = 1,
+	[INST_DUP] = 1,
+	[INST_IPLUS] = 0,
+	[INST_IMINUS] = 0,
+	[INST_IMUL] = 0,
+	[INST_IDIV] = 0,
+	[INST_IMOD] = 0,
+	[INST_JUMP] = 1,
+	[INST_JUMP_IF] = 1,
+	[INST_EQ] = 0,
+	[INST_GT] = 0,
+	[INST_LT] = 0,
+	[INST_GEQ] = 0,
+	[INST_LEQ] = 0,
+	[INST_HALT] = 0,
+	[INST_PRINT_DEBUG] = 0,
+};
 
 const char* instructionTypeAsCstr(InstructionType type);
 
@@ -64,7 +111,7 @@ typedef union
 	void* asPtr;
 } Word;
 
-static_assert(sizeof(Word) == 8, "The virtual machine's word size must be 64 bytes.");
+// static_assert(sizeof(Word) == 8, "The virtual machine's word size must be 64 bytes.");
 
 typedef struct
 {
@@ -83,23 +130,6 @@ typedef struct
 
 	int halt;
 } QuarkVM;
-
-// TODO: Replace instruction macros with functions
-#define PUT_INSTRUCTION(val) { .type = INST_PUT, .value = val }
-#define DUP_INSTRUCTION(addr) { .type = INST_DUP, .value = addr }
-#define ADD_INSTRUCTION { .type = INST_ADD }
-#define SUB_INSTRUCTION { .type = INST_SUB }
-#define MUL_INSTRUCTION { .type = INST_MUL }
-#define DIV_INSTRUCTION { .type = INST_DIV }
-#define MOD_INSTRUCTION { .type = INST_MOD }
-#define JUMP_INSTRUCTION(addr) { .type = INST_JUMP, .value = addr }
-#define JUMP_IF_INSTRUCTION(addr) { .type = INST_JUMP_IF, .value = addr }
-#define EQ_INSTRUCTION { .type = INST_EQ }
-#define GT_INSTRUCTION { .type = INST_GT }
-#define LT_INSTRUCTION { .type = INST_LT }
-#define GEQ_INSTRUCTION { .type = INST_GEQ }
-#define LEQ_INSTRUCTION { .type = INST_LEQ }
-#define HALT_INSTRUCTION { .type = INST_HALT }
 
 Exception vmExecuteInstruction(QuarkVM* vm);
 Exception vmExecuteProgram(QuarkVM* vm, int limit, int printOps, int debug);
@@ -176,11 +206,11 @@ const char* instructionTypeAsCstr(InstructionType type)
 	case INST_KAPUT: return "INST_KAPUT";
 	case INST_PUT: return "INST_PUT";
 	case INST_DUP: return "INST_DUP";
-	case INST_ADD: return "INST_ADD";
-	case INST_SUB: return "INST_SUB";
-	case INST_MUL: return "INST_MUL";
-	case INST_DIV: return "INST_DIV";
-	case INST_MOD: return "INST_MOD";
+	case INST_IPLUS: return "INST_IPLUS";
+	case INST_IMINUS: return "INST_IMINUS";
+	case INST_IMUL: return "INST_IMUL";
+	case INST_IDIV: return "INST_IDIV";
+	case INST_IMOD: return "INST_IMOD";
 	case INST_JUMP: return "INST_JUMP";
 	case INST_JUMP_IF: return "INST_JUMP_IF";
 	case INST_EQ: return "INST_EQ";
@@ -220,28 +250,28 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 		++vm->stackSize;
 		++vm->instructionPointer;
 		break;
-	case INST_ADD:
+	case INST_IPLUS:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
 		vm->stack[vm->stackSize - 2].asU64 += vm->stack[vm->stackSize - 1].asU64;
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
-	case INST_SUB:
+	case INST_IMINUS:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
 		vm->stack[vm->stackSize - 2].asU64 -= vm->stack[vm->stackSize - 1].asU64;
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
-	case INST_MUL:
+	case INST_IMUL:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
 		vm->stack[vm->stackSize - 2].asU64 *= vm->stack[vm->stackSize - 1].asU64;
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
-	case INST_DIV:
+	case INST_IDIV:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 		if (vm->stack[vm->stackSize - 1].asU64 == 0) return EX_DIVIDE_BY_ZERO;
 
@@ -249,7 +279,7 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
-	case INST_MOD:
+	case INST_IMOD:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
 		vm->stack[vm->stackSize - 2].asU64 %= vm->stack[vm->stackSize - 1].asU64;
@@ -667,7 +697,7 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 
 				vmTablePushFunction(vmTable, function, vm->programSize);
 			}
-			else if (sv_equals(instructionName, sv_cstrAsStringView("put")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_PUT])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_PUT,
@@ -676,12 +706,12 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 						.asI64 = sv_toInt(operand)
 					},
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("kaput")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_KAPUT])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_KAPUT,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("dup")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_DUP])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_DUP,
@@ -690,32 +720,32 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 						.asI64 = sv_toInt(operand)
 					},
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("plus")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_IPLUS])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_ADD,
+				.type = INST_IPLUS,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("minus")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_IMINUS])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_SUB,
+				.type = INST_IMINUS,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("mul")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_IMUL])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_MUL,
+				.type = INST_IMUL,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("div")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_IDIV])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_DIV,
+				.type = INST_IDIV,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("mod")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_IMOD])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_MOD,
+				.type = INST_IMOD,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("jmp")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_JUMP])))
 			{
 				vmTablePushDelayedOperand(vmTable, vm->programSize, operand);
 				vm->program[vm->programSize++] = (Instruction)
@@ -723,7 +753,7 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 					.type = INST_JUMP,
 				};
 			}
-			else if (sv_equals(instructionName, sv_cstrAsStringView("jif")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_JUMP_IF])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_JUMP_IF,
@@ -732,37 +762,37 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 						.asI64 = sv_toInt(operand)
 					},
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("eq")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_EQ])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_EQ,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("gt")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_GT])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_GT,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("lt")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_LT])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_LT,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("ge")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_GEQ])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_GEQ,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("le")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_LEQ])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_LEQ,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("stop")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_HALT])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_HALT,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView("print")))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_PRINT_DEBUG])))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_PRINT_DEBUG,

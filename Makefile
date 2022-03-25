@@ -1,4 +1,4 @@
-CFLAGS=-std=c11 -pedantic -Wall -Wextra -Wmissing-prototypes
+CFLAGS=-std=c11 -pedantic -Wall -Wextra -Wswitch-enum -Wmissing-prototypes
 LIBS=
 
 EXAMPLES=examples/fibonacci.qce examples/123.qce

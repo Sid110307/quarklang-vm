@@ -40,8 +40,9 @@
 
 (eval-and-compile
 	(defconst qas-operators
-		'("plus" "minus" "mul" "div" "mod" "eq"
-		"lt" "gt" "le" "ge")))
+		'("iplus" "iminus" "imul" "idiv" "imod"
+		"fplus" "fminus" "fmul" "fdiv" "fmod"
+		"eq" "lt" "gt" "le" "ge")))
 
 (eval-and-compile
 	(defconst qas-keywords

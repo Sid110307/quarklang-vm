@@ -18,7 +18,7 @@
 				},
 				{
 					"name": "keyword.operator",
-					"match": "\\b(plus|minus|mul|div|mod)\\b"
+					"match": "\\b(iplus|iminus|imul|idiv|imod|fplus|fminus|fmul|fdiv|fmod)\\b"
 				},
 				{
 					"name": "entity.name.function",
