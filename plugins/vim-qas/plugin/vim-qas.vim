@@ -38,7 +38,7 @@ syntax keyword quarkVMTodos TODO XXX FIXME NOTE HACK BUG
 syntax keyword quarkVMKeywords put kaput dup jmp jif stop print
 syntax keyword quarkVMOperators iplus iminus imul idiv imod fplus fminus fmul fdiv fmod eq lt gt le ge
 
-syntax match quarkVMNumeric "[0-9]\+$"
+syntax match quarkVMNumeric "[0-9]+\.?[0-9]+$"
 syntax match quarkVMFunction "\v[a-zA-Z0-9_]+\:$"
 
 syntax region quarkVMCommentLine start="--" end="$" contains=quarkVMTodos

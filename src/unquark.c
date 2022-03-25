@@ -33,10 +33,10 @@ int main(int argc, char** argv)
 
 			for (InstructionAddress j = 0; j < vm.programSize; ++j)
 			{
-				if (!isRaw) printf("Op \033[1;34m%ld\033[0m: %s", j, instructionNames[vm.program[j].type]);
-				else printf("%s", instructionNames[vm.program[j].type]);
+				if (!isRaw) printf("Op \033[1;34m%ld\033[0m: %s", j, getInstructionName(vm.program[j].type));
+				else printf("%s", getInstructionName(vm.program[j].type));
 
-				if (instructionWithOperand[vm.program[j].type])
+				if (instructionWithOperand(vm.program[j].type))
 					printf(" %ld", vm.program[j].value.asI64);
 
 				printf("\n");

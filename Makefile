@@ -1,7 +1,7 @@
 CFLAGS=-std=c11 -pedantic -Wall -Wextra -Wswitch-enum -Wmissing-prototypes
-LIBS=
+LIBS=-lm
 
-EXAMPLES=examples/fibonacci.qce examples/123.qce
+EXAMPLES=examples/fibonacci.qce examples/123I.qce examples/123F.qce
 
 .PHONY: all
 all: clean interpreter compiler disassembler nanboxer

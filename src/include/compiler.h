@@ -8,6 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+#include <math.h>
 
 #define VM_STACK_CAPACITY 1048576
 #define ARRAY_CAPACITY(x) (sizeof(x) / sizeof((x)[0]))
@@ -36,69 +37,35 @@ typedef enum
 	INST_KAPUT = 0,
 	INST_PUT,
 	INST_DUP,
+
 	INST_IPLUS,
 	INST_IMINUS,
 	INST_IMUL,
 	INST_IDIV,
 	INST_IMOD,
-	// INST_FPLUS,
-	// INST_FMINUS,
-	// INST_FMUL,
-	// INST_FDIV,
-	// INST_FMOD,
+
+	INST_FPLUS,
+	INST_FMINUS,
+	INST_FMUL,
+	INST_FDIV,
+	INST_FMOD,
+
 	INST_JUMP,
 	INST_JUMP_IF,
+
 	INST_EQ,
 	INST_GT,
 	INST_LT,
 	INST_GEQ,
 	INST_LEQ,
+
 	INST_HALT,
 	INST_PRINT_DEBUG,
+	TOTAL_INST_COUNT,
 } InstructionType;
 
-const char* const instructionNames[] =
-{
-	[INST_KAPUT] = "kaput",
-	[INST_PUT] = "put",
-	[INST_DUP] = "dup",
-	[INST_IPLUS] = "iplus",
-	[INST_IMINUS] = "iminus",
-	[INST_IMUL] = "imul",
-	[INST_IDIV] = "idiv",
-	[INST_IMOD] = "imod",
-	[INST_JUMP] = "jmp",
-	[INST_JUMP_IF] = "jif",
-	[INST_EQ] = "eq",
-	[INST_GT] = "gt",
-	[INST_LT] = "lt",
-	[INST_GEQ] = "ge",
-	[INST_LEQ] = "le",
-	[INST_HALT] = "stop",
-	[INST_PRINT_DEBUG] = "print",
-};
-
-const int instructionWithOperand[] =
-{
-	[INST_KAPUT] = 0,
-	[INST_PUT] = 1,
-	[INST_DUP] = 1,
-	[INST_IPLUS] = 0,
-	[INST_IMINUS] = 0,
-	[INST_IMUL] = 0,
-	[INST_IDIV] = 0,
-	[INST_IMOD] = 0,
-	[INST_JUMP] = 1,
-	[INST_JUMP_IF] = 1,
-	[INST_EQ] = 0,
-	[INST_GT] = 0,
-	[INST_LT] = 0,
-	[INST_GEQ] = 0,
-	[INST_LEQ] = 0,
-	[INST_HALT] = 0,
-	[INST_PRINT_DEBUG] = 0,
-};
-
+const char* getInstructionName(InstructionType type);
+int instructionWithOperand(InstructionType type);
 const char* instructionTypeAsCstr(InstructionType type);
 
 typedef uint64_t InstructionAddress;
@@ -199,6 +166,66 @@ const char* exceptionAsCstr(Exception exception)
 	}
 }
 
+const char* getInstructionName(InstructionType type)
+{
+	switch (type)
+	{
+	case INST_KAPUT: return "kaput";
+	case INST_PUT: return "put";
+	case INST_DUP: return "dup";
+	case INST_IPLUS: return "iplus";
+	case INST_IMINUS: return "iminus";
+	case INST_IMUL: return "imul";
+	case INST_IDIV: return "idiv";
+	case INST_IMOD: return "imod";
+	case INST_FPLUS: return "fplus";
+	case INST_FMINUS: return "fminus";
+	case INST_FMUL: return "fmul";
+	case INST_FDIV: return "fdiv";
+	case INST_FMOD: return "fmod";
+	case INST_JUMP: return "jmp";
+	case INST_JUMP_IF: return "jif";
+	case INST_EQ: return "eq";
+	case INST_GT: return "gt";
+	case INST_LT: return "lt";
+	case INST_GEQ: return "ge";
+	case INST_LEQ: return "le";
+	case INST_HALT: return "stop";
+	case INST_PRINT_DEBUG: return "print";
+	case TOTAL_INST_COUNT: default: assert(0 && "[instructionName]: Unreachable");
+	}
+}
+
+int instructionWithOperand(InstructionType type)
+{
+	switch (type)
+	{
+	case INST_KAPUT: return 0;
+	case INST_PUT: return 1;
+	case INST_DUP: return 1;
+	case INST_IPLUS: return 0;
+	case INST_IMINUS: return 0;
+	case INST_IMUL: return 0;
+	case INST_IDIV: return 0;
+	case INST_IMOD: return 0;
+	case INST_FPLUS: return 0;
+	case INST_FMINUS: return 0;
+	case INST_FMUL: return 0;
+	case INST_FDIV: return 0;
+	case INST_FMOD: return 0;
+	case INST_JUMP: return 1;
+	case INST_JUMP_IF: return 1;
+	case INST_EQ: return 0;
+	case INST_GT: return 0;
+	case INST_LT: return 0;
+	case INST_GEQ: return 0;
+	case INST_LEQ: return 0;
+	case INST_HALT: return 0;
+	case INST_PRINT_DEBUG: return 0;
+	case TOTAL_INST_COUNT: default: assert(0 && "[instructionWithOperand]: Unreachable");
+	}
+}
+
 const char* instructionTypeAsCstr(InstructionType type)
 {
 	switch (type)
@@ -206,21 +233,31 @@ const char* instructionTypeAsCstr(InstructionType type)
 	case INST_KAPUT: return "INST_KAPUT";
 	case INST_PUT: return "INST_PUT";
 	case INST_DUP: return "INST_DUP";
+
 	case INST_IPLUS: return "INST_IPLUS";
 	case INST_IMINUS: return "INST_IMINUS";
 	case INST_IMUL: return "INST_IMUL";
 	case INST_IDIV: return "INST_IDIV";
 	case INST_IMOD: return "INST_IMOD";
+
+	case INST_FPLUS: return "INST_FPLUS";
+	case INST_FMINUS: return "INST_FMINUS";
+	case INST_FMUL: return "INST_FMUL";
+	case INST_FDIV: return "INST_FDIV";
+	case INST_FMOD: return "INST_FMOD";
+
 	case INST_JUMP: return "INST_JUMP";
 	case INST_JUMP_IF: return "INST_JUMP_IF";
+
 	case INST_EQ: return "INST_EQ";
 	case INST_GT: return "INST_GT";
 	case INST_LT: return "INST_LT";
 	case INST_GEQ: return "INST_GEQ";
 	case INST_LEQ: return "INST_LEQ";
+
 	case INST_HALT: return "INST_HALT";
 	case INST_PRINT_DEBUG: return "INST_PRINT_DEBUG";
-	default: assert(0 && "[instructionTypeAsCstr]: Unreachable");
+	case TOTAL_INST_COUNT: default: assert(0 && "[instructionTypeAsCstr]: Unreachable");
 	}
 }
 
@@ -286,6 +323,42 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
+	case INST_FPLUS:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 2].asF64 += vm->stack[vm->stackSize - 1].asF64;
+		--vm->stackSize;
+		++vm->instructionPointer;
+		break;
+	case INST_FMINUS:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 2].asF64 -= vm->stack[vm->stackSize - 1].asF64;
+		--vm->stackSize;
+		++vm->instructionPointer;
+		break;
+	case INST_FMUL:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 2].asF64 *= vm->stack[vm->stackSize - 1].asF64;
+		--vm->stackSize;
+		++vm->instructionPointer;
+		break;
+	case INST_FDIV:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+		if (vm->stack[vm->stackSize - 1].asF64 == 0) return EX_DIVIDE_BY_ZERO;
+
+		vm->stack[vm->stackSize - 2].asF64 /= vm->stack[vm->stackSize - 1].asF64;
+		--vm->stackSize;
+		++vm->instructionPointer;
+		break;
+	case INST_FMOD:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 2].asF64 = fmod(vm->stack[vm->stackSize - 2].asF64, vm->stack[vm->stackSize - 1].asF64);
+		--vm->stackSize;
+		++vm->instructionPointer;
+		break;
 	case INST_JUMP:
 		vm->instructionPointer = instruction.value.asU64;
 		break;
@@ -345,6 +418,7 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
+	case TOTAL_INST_COUNT:
 	default:
 		return EX_INVALID_INSTRUCTION;
 	}
@@ -697,7 +771,7 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 
 				vmTablePushFunction(vmTable, function, vm->programSize);
 			}
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_PUT])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_PUT))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_PUT,
@@ -706,12 +780,12 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 						.asI64 = sv_toInt(operand)
 					},
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_KAPUT])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_KAPUT))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_KAPUT,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_DUP])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_DUP))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_DUP,
@@ -720,32 +794,57 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 						.asI64 = sv_toInt(operand)
 					},
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_IPLUS])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_IPLUS))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_IPLUS,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_IMINUS])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_IMINUS))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_IMINUS,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_IMUL])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_IMUL))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_IMUL,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_IDIV])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_IDIV))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_IDIV,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_IMOD])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_IMOD))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_IMOD,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_JUMP])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_FPLUS))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_FPLUS,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_FMINUS))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_FMINUS,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_FMUL))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_FMUL,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_FDIV))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_FDIV,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_FMOD))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_FMOD,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_JUMP))))
 			{
 				vmTablePushDelayedOperand(vmTable, vm->programSize, operand);
 				vm->program[vm->programSize++] = (Instruction)
@@ -753,7 +852,7 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 					.type = INST_JUMP,
 				};
 			}
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_JUMP_IF])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_JUMP_IF))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_JUMP_IF,
@@ -762,37 +861,37 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 						.asI64 = sv_toInt(operand)
 					},
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_EQ])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_EQ))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_EQ,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_GT])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_GT))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_GT,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_LT])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_LT))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_LT,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_GEQ])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_GEQ))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_GEQ,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_LEQ])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_LEQ))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_LEQ,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_HALT])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_HALT))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_HALT,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(instructionNames[INST_PRINT_DEBUG])))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_PRINT_DEBUG))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_PRINT_DEBUG,
