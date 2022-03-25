@@ -16,6 +16,7 @@
 #define VM_PROGRAM_CAPACITY 1024
 #define VM_FUNCTION_CAPACITY 1024
 #define VM_DELAYED_OPERANDS_CAPACITY 1024
+#define VM_WORD_CAPACITY 1024
 
 int VM_EXECUTION_LIMIT = 64;
 
@@ -146,6 +147,7 @@ InstructionAddress vmTableFindAddress(const VMTable* table, StringView label);
 void vmTablePushFunction(VMTable* table, StringView label, InstructionAddress address);
 void vmTablePushDelayedOperand(VMTable* table, InstructionAddress address, StringView label);
 
+Word numberLiteralToWord(StringView source);
 void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable);
 
 #endif // QUARK_VM_COMPILER_H_
@@ -346,7 +348,7 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 		break;
 	case INST_FDIV:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
-		if (vm->stack[vm->stackSize - 1].asF64 == 0) return EX_DIVIDE_BY_ZERO;
+		// if (vm->stack[vm->stackSize - 1].asF64 == 0) return EX_DIVIDE_BY_ZERO;
 
 		vm->stack[vm->stackSize - 2].asF64 /= vm->stack[vm->stackSize - 1].asF64;
 		--vm->stackSize;
@@ -747,6 +749,31 @@ void vmTablePushDelayedOperand(VMTable* table, InstructionAddress address, Strin
 	};
 }
 
+Word numberLiteralToWord(StringView source)
+{
+	assert(source.count < VM_WORD_CAPACITY);
+	char cstr[source.count + 1];
+	char* endPtr = 0;
+
+	memcpy(cstr, source.data, source.count);
+	cstr[source.count] = '\0';
+
+	Word result = { 0 };
+
+	result.asU64 = strtoull(cstr, &endPtr, 10);
+	if ((size_t)(endPtr - cstr) != source.count)
+	{
+		result.asF64 = strtod(cstr, &endPtr);
+		if ((size_t)(endPtr - cstr) != source.count)
+		{
+			fprintf(stderr, "[\033[1;31mERROR\033[0m]: Invalid number literal `%s`\n", cstr);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	return result;
+}
+
 void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 {
 	vm->programSize = 0;
@@ -772,14 +799,13 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 				vmTablePushFunction(vmTable, function, vm->programSize);
 			}
 			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_PUT))))
-				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_PUT,
-				.value =
-					{
-						.asI64 = sv_toInt(operand)
-					},
-			};
+				vm->program[vm->programSize++] = (Instruction)
+				{
+					.type = INST_PUT,
+					.value = numberLiteralToWord(operand),
+				};
+			}
 			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_KAPUT))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
