@@ -18,7 +18,19 @@ int main(int argc, char** argv)
 
 	for (int i = 1; i < argc; i++)
 	{
-		if (strcmp(argv[i], "--file") == 0 || strcmp(argv[i], "-f") == 0)
+		if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
+		{
+			printf("[\033[1;34mINFO\033[0m]: Usage: %s [options] [--file | -f] <input_file.qce>\n\n", argv[0]);
+			printf("[\033[1;34mINFO\033[0m]: Required Parameters:\n");
+			printf("[\033[1;34mINFO\033[0m]:   --file <file> | -f <file>: Specify the file to decompile\n");
+			printf("[\033[1;34mINFO\033[0m]: Optional Parameters:\n");
+			printf("[\033[1;34mINFO\033[0m]:   --help        | -h: Print this help message and exit\n");
+			printf("[\033[1;34mINFO\033[0m]:   --raw: Print raw text\n");
+
+			exit(EXIT_SUCCESS);
+		}
+		else if (strcmp(argv[i], "--raw") == 0) isRaw = true;
+		else if (strcmp(argv[i], "--file") == 0 || strcmp(argv[i], "-f") == 0)
 		{
 			const char* inputFilePath = argv[++i];
 
@@ -45,18 +57,6 @@ int main(int argc, char** argv)
 				// exit(EXIT_FAILURE);
 			}
 		}
-		else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
-		{
-			printf("[\033[1;34mINFO\033[0m]: Usage: %s [options] [--file | -f] <input_file.qce>\n\n", argv[0]);
-			printf("[\033[1;34mINFO\033[0m]: Required Parameters:\n");
-			printf("[\033[1;34mINFO\033[0m]:   --file <file> | -f <file>: Specify the file to decompile\n");
-			printf("[\033[1;34mINFO\033[0m]: Optional Parameters:\n");
-			printf("[\033[1;34mINFO\033[0m]:   --help        | -h: Print this help message and exit\n");
-			printf("[\033[1;34mINFO\033[0m]:   --raw: Print raw text\n");
-
-			exit(EXIT_SUCCESS);
-		}
-		else if (strcmp(argv[i], "--raw") == 0) isRaw = true;
 		else
 		{
 			fprintf(stderr, "[\033[1;31mERROR\033[0m]: Unknown option '%s'\n",

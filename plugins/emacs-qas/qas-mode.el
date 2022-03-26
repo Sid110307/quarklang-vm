@@ -35,7 +35,7 @@
 
 (eval-and-compile
 	(defconst qas-instructions
-		'("put" "kaput" "dup" "jmp" "jif" "stop"
+		'("put" "kaput" "dup" "swap" "jmp" "jif" "stop"
 		"print")))
 
 (eval-and-compile

@@ -12,4 +12,4 @@ loop:
 	dup 1
 	dup 1
 	iplus
-	jmp loop  -- Repeat
+	jmp loop -- Repeat

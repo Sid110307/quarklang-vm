@@ -5,6 +5,8 @@ int main(int argc, char** argv)
 {
 	int printOps = 0;
 	int debug = 0;
+	int limit = -1;
+	int stepDebug = 0;
 
 	if (argc > 1)
 	{
@@ -33,7 +35,8 @@ int main(int argc, char** argv)
 				printf("[\033[1;34mINFO\033[0m]: Optional Parameters:\n");
 				printf("[\033[1;34mINFO\033[0m]:   --limit <size> | -l <size>: Specify the maximum number of instructions to run. (default: %d)\n", VM_EXECUTION_LIMIT);
 				printf("[\033[1;34mINFO\033[0m]:   --print-ops    | -p: Print the current instruction and its value (if any)\n");
-				printf("[\033[1;34mINFO\033[0m]:   --debug        | -d: [\033[0;33mBETA\033[0m] Start an interactive debugger\n");
+				printf("[\033[1;34mINFO\033[0m]:   --debug        | -d: Start an interactive debugger\n");
+				printf("[\033[1;34mINFO\033[0m]:   --step         | -s: Step through the program\n");
 				printf("[\033[1;34mINFO\033[0m]:   --help         | -h: Print this help message and exit\n");
 
 				exit(EXIT_SUCCESS);
@@ -50,10 +53,33 @@ int main(int argc, char** argv)
 				}
 
 				vmLoadProgramFromFile(&quarkVm, inputFilePath);
-				vmExecuteProgram(&quarkVm, VM_EXECUTION_LIMIT, printOps, debug);
+
+				if (!stepDebug)
+				{
+					vmExecuteProgram(&quarkVm, VM_EXECUTION_LIMIT, printOps, debug);
+					vmDumpStack(stdout, &quarkVm);
+				}
+				else
+				{
+					while (limit != 0 && !quarkVm.halt)
+					{
+						vmDumpStack(stdout, &quarkVm);
+						getchar();
+
+						Exception exception = vmExecuteInstruction(&quarkVm);
+						if (exception != EX_OK)
+						{
+							fprintf(stderr, "[\033[1;31mERROR\033[0m]: %s\n", exceptionAsCstr(exception));
+							return EXIT_FAILURE;
+						}
+
+						if (limit > 0) --limit;
+					}
+				}
 
 				return EXIT_SUCCESS;
 			}
+			else if (strcmp(argv[i], "--step") == 0 || strcmp(argv[i], "-s") == 0) stepDebug = 1;
 			else
 			{
 				fprintf(stderr, "[\033[1;31mERROR\033[0m]: Unknown argument: %s\n", argv[i]);

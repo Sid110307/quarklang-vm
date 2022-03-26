@@ -38,6 +38,7 @@ typedef enum
 	INST_KAPUT = 0,
 	INST_PUT,
 	INST_DUP,
+	INST_SWAP,
 
 	INST_IPLUS,
 	INST_IMINUS,
@@ -175,23 +176,29 @@ const char* getInstructionName(InstructionType type)
 	case INST_KAPUT: return "kaput";
 	case INST_PUT: return "put";
 	case INST_DUP: return "dup";
+	case INST_SWAP: return "swap";
+
 	case INST_IPLUS: return "iplus";
 	case INST_IMINUS: return "iminus";
 	case INST_IMUL: return "imul";
 	case INST_IDIV: return "idiv";
 	case INST_IMOD: return "imod";
+
 	case INST_FPLUS: return "fplus";
 	case INST_FMINUS: return "fminus";
 	case INST_FMUL: return "fmul";
 	case INST_FDIV: return "fdiv";
 	case INST_FMOD: return "fmod";
+
 	case INST_JUMP: return "jmp";
 	case INST_JUMP_IF: return "jif";
+
 	case INST_EQ: return "eq";
 	case INST_GT: return "gt";
 	case INST_LT: return "lt";
 	case INST_GEQ: return "ge";
 	case INST_LEQ: return "le";
+
 	case INST_HALT: return "stop";
 	case INST_PRINT_DEBUG: return "print";
 	case TOTAL_INST_COUNT: default: assert(0 && "[instructionName]: Unreachable");
@@ -205,23 +212,29 @@ int instructionWithOperand(InstructionType type)
 	case INST_KAPUT: return 0;
 	case INST_PUT: return 1;
 	case INST_DUP: return 1;
+	case INST_SWAP: return 0;
+
 	case INST_IPLUS: return 0;
 	case INST_IMINUS: return 0;
 	case INST_IMUL: return 0;
 	case INST_IDIV: return 0;
 	case INST_IMOD: return 0;
+
 	case INST_FPLUS: return 0;
 	case INST_FMINUS: return 0;
 	case INST_FMUL: return 0;
 	case INST_FDIV: return 0;
 	case INST_FMOD: return 0;
+
 	case INST_JUMP: return 1;
 	case INST_JUMP_IF: return 1;
+
 	case INST_EQ: return 0;
 	case INST_GT: return 0;
 	case INST_LT: return 0;
 	case INST_GEQ: return 0;
 	case INST_LEQ: return 0;
+
 	case INST_HALT: return 0;
 	case INST_PRINT_DEBUG: return 0;
 	case TOTAL_INST_COUNT: default: assert(0 && "[instructionWithOperand]: Unreachable");
@@ -235,6 +248,7 @@ const char* instructionTypeAsCstr(InstructionType type)
 	case INST_KAPUT: return "INST_KAPUT";
 	case INST_PUT: return "INST_PUT";
 	case INST_DUP: return "INST_DUP";
+	case INST_SWAP: return "INST_SWAP";
 
 	case INST_IPLUS: return "INST_IPLUS";
 	case INST_IMINUS: return "INST_IMINUS";
@@ -287,6 +301,15 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 
 		vm->stack[vm->stackSize] = vm->stack[vm->stackSize - 1 - instruction.value.asU64];
 		++vm->stackSize;
+		++vm->instructionPointer;
+		break;
+	case INST_SWAP:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+
+		Word temp = vm->stack[vm->stackSize - 1];
+		vm->stack[vm->stackSize - 1] = vm->stack[vm->stackSize - 2];
+		vm->stack[vm->stackSize - 2] = temp;
+
 		++vm->instructionPointer;
 		break;
 	case INST_IPLUS:
@@ -496,7 +519,7 @@ Exception vmExecuteProgram(QuarkVM* vm, int limit, int printOps, int debug)
 
 		if (quarkVm.halt) printf("[\033[1;34mINFO\033[0m]: Program halted at Op %d.\n", i);
 
-		if (limit != -1) --limit;
+		if (limit > 0) --limit;
 	}
 
 	vmDumpStack(stdout, &quarkVm);
@@ -819,6 +842,11 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 					{
 						.asI64 = sv_toInt(operand)
 					},
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_SWAP))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_SWAP,
 			};
 			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_IPLUS))))
 				vm->program[vm->programSize++] = (Instruction)
