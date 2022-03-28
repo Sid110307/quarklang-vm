@@ -36,7 +36,7 @@ $ cd quarklang-vm
 - Run `make`:
 
 ```sh
-$ make
+$ make -s
 # Building interpreter... Done.
 # Building compiler... Done.
 ```
@@ -46,14 +46,14 @@ $ make
 - To install for the whole system:
 
 ```sh
-$ make install
+$ make install -s
 # Installing for system...
 ```
 
 - To install for the current user:
 
 ```sh
-$ make install-user
+$ make install-user -s
 # Installing for user 'user'...
 ```
 
@@ -73,6 +73,16 @@ $ quarki --file <source.qas>
 $ quarkc -f <output.qce>
 # Or
 $ quarkc --file <output.qce>
+```
+
+### Decompiler/Disassembler
+
+- To view the assembly code of a `.qce` file, run `unquark` with a file argument:
+
+```sh
+$ unquark -f <source.qce>
+# Or
+$ unquark --file <source.qce>
 ```
 
 ## Debugging
