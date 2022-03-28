@@ -42,7 +42,8 @@
 	(defconst qas-operators
 		'("iplus" "iminus" "imul" "idiv" "imod"
 		"fplus" "fminus" "fmul" "fdiv" "fmod"
-		"eq" "lt" "gt" "le" "ge")))
+		"ieq" "ineq" "ilt" "igt" "ile" "ige" "feq"
+		"fneq" "flt" "fgt" "fle" "fge")))
 
 (eval-and-compile
 	(defconst qas-keywords

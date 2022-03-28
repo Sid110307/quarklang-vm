@@ -3,7 +3,6 @@
 
 int main(int argc, char** argv)
 {
-	int printOps = 0;
 	int debug = 0;
 	int limit = -1;
 	int stepDebug = 0;
@@ -23,8 +22,6 @@ int main(int argc, char** argv)
 
 				VM_EXECUTION_LIMIT = atoi(argv[i]);
 			}
-			else if (strcmp(argv[i], "--print-ops") == 0 || strcmp(argv[i], "-p") == 0)
-				printOps = 1;
 			else if (strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0)
 				debug = 1;
 			else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
@@ -34,7 +31,6 @@ int main(int argc, char** argv)
 				printf("[\033[1;34mINFO\033[0m]:   --file <file>  | -f <file>: Specify the file to compile\n");
 				printf("[\033[1;34mINFO\033[0m]: Optional Parameters:\n");
 				printf("[\033[1;34mINFO\033[0m]:   --limit <size> | -l <size>: Specify the maximum number of instructions to run. (default: %d)\n", VM_EXECUTION_LIMIT);
-				printf("[\033[1;34mINFO\033[0m]:   --print-ops    | -p: Print the current instruction and its value (if any)\n");
 				printf("[\033[1;34mINFO\033[0m]:   --debug        | -d: Start an interactive debugger\n");
 				printf("[\033[1;34mINFO\033[0m]:   --step         | -s: Step through the program\n");
 				printf("[\033[1;34mINFO\033[0m]:   --help         | -h: Print this help message and exit\n");
@@ -56,8 +52,12 @@ int main(int argc, char** argv)
 
 				if (!stepDebug)
 				{
-					vmExecuteProgram(&quarkVm, VM_EXECUTION_LIMIT, printOps, debug);
-					vmDumpStack(stdout, &quarkVm);
+					Exception exception = vmExecuteProgram(&quarkVm, VM_EXECUTION_LIMIT, debug);
+					if (exception != EX_OK)
+					{
+						// vmDumpStack(stdout, &quarkVm);
+						return EXIT_FAILURE;
+					}
 				}
 				else
 				{

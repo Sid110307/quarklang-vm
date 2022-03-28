@@ -1,7 +1,7 @@
 CFLAGS=-std=c11 -pedantic -Wall -Wextra -Wswitch-enum -Wmissing-prototypes
 LIBS=-lm
 
-EXAMPLES=examples/fibonacci.qce examples/123I.qce examples/123F.qce examples/pi.qce
+EXAMPLES=$(shell find examples -name "*.qas" | sed 's/\.qas/.qce/g' | tr '\n' ' ')
 
 .PHONY: all
 all: clean interpreter compiler disassembler nanboxer

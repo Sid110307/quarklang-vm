@@ -1,0 +1,32 @@
+-- Copyright 2022-Present Siddharth Praveen Bharadwaj
+-- https://sid110307.github.io/Sid110307
+--
+-- QuarkLang Assembly program for calculating Euler's constant (~2.72)
+
+put 1.0 -- `n`
+put 1.0 -- `n` factorial
+put 1.0 -- Sum
+
+loop:
+	put 1.0
+	dup 2
+	fdiv
+	fplus
+
+	swap 2
+	put 1.0
+	fplus
+	dup 0
+	swap 2
+	fmul
+
+	swap 1
+	swap 2
+	dup 2
+	put 100.0
+
+	fge
+	jif loop
+	
+	print
+	stop

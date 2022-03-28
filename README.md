@@ -90,6 +90,8 @@ $ quarkc --debug -f <source.qas>
 
 Check the [examples](https://github.com/Sid110307/quarklang-vm/tree/master/examples) folder for examples.
 
-## License
+Run them with `make examples -s`.
+
+## [License](https://github.com/Sid110307/quarklang-vm/tree/master/LICENSE)
 
 Licensed under the [MIT](https://opensource.org/licenses/MIT) license.

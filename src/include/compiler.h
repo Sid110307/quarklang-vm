@@ -10,9 +10,12 @@
 #include <ctype.h>
 #include <math.h>
 
-#define VM_STACK_CAPACITY 1048576
+#define QUARK_VM_STRINGVIEW_IMPLEMENTATION
+#include "stringview.h"
+
 #define ARRAY_CAPACITY(x) (sizeof(x) / sizeof((x)[0]))
 
+#define VM_STACK_CAPACITY 1048576
 #define VM_PROGRAM_CAPACITY 1024
 #define VM_FUNCTION_CAPACITY 1024
 #define VM_DELAYED_OPERANDS_CAPACITY 1024
@@ -26,9 +29,9 @@ typedef enum
 	EX_STACK_OVERFLOW,
 	EX_STACK_UNDERFLOW,
 	EX_INVALID_INSTRUCTION,
-	EX_DIVIDE_BY_ZERO,
 	EX_ILLEGAL_INSTRUCTION_ACCESS,
 	EX_ILLEGAL_OPERATION,
+	EX_DIVIDE_BY_ZERO,
 } Exception;
 
 const char* exceptionAsCstr(Exception exception);
@@ -55,11 +58,19 @@ typedef enum
 	INST_JUMP,
 	INST_JUMP_IF,
 
-	INST_EQ,
-	INST_GT,
-	INST_LT,
-	INST_GEQ,
-	INST_LEQ,
+	INST_IEQ,
+	INST_INEQ,
+	INST_IGT,
+	INST_ILT,
+	INST_IGEQ,
+	INST_ILEQ,
+
+	INST_FEQ,
+	INST_FNEQ,
+	INST_FGT,
+	INST_FLT,
+	INST_FGEQ,
+	INST_FLEQ,
 
 	INST_HALT,
 	INST_PRINT_DEBUG,
@@ -80,7 +91,7 @@ typedef union
 	void* asPtr;
 } Word;
 
-// static_assert(sizeof(Word) == 8, "The virtual machine's word size must be 64 bytes.");
+static_assert(sizeof(Word) == 8, "The virtual machine's word size must be 64 bytes.");
 
 typedef struct
 {
@@ -101,28 +112,13 @@ typedef struct
 } QuarkVM;
 
 Exception vmExecuteInstruction(QuarkVM* vm);
-Exception vmExecuteProgram(QuarkVM* vm, int limit, int printOps, int debug);
+Exception vmExecuteProgram(QuarkVM* vm, int limit, int debug);
 void vmDumpStack(FILE* stream, const QuarkVM* quarkVm);
 void vmLoadProgramFromMemory(QuarkVM* quarkVm, Instruction* program, size_t programSize);
 void vmLoadProgramFromFile(QuarkVM* quarkVm, const char* filePath);
 void vmSaveProgramToFile(const QuarkVM* vm, const char* filePath);
 
 QuarkVM quarkVm = { 0 };
-
-typedef struct
-{
-	size_t count;
-	const char* data;
-} StringView;
-
-StringView sv_cstrAsStringView(const char* cstr);
-StringView sv_trimStart(StringView sv);
-StringView sv_trimEnd(StringView sv);
-StringView sv_trim(StringView sv);
-StringView sv_trimByDelimeter(StringView* sv, char delimeter);
-int sv_equals(StringView a, StringView b);
-int sv_toInt(StringView sv);
-StringView sv_readFile(const char* filePath);
 
 typedef struct
 {
@@ -151,7 +147,7 @@ void vmTablePushDelayedOperand(VMTable* table, InstructionAddress address, Strin
 Word numberLiteralToWord(StringView source);
 void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable);
 
-#endif // QUARK_VM_COMPILER_H_
+#endif //! QUARK_VM_COMPILER_H_
 #ifdef QUARK_VM_COMPILER_IMPLEMENTATION
 
 const char* exceptionAsCstr(Exception exception)
@@ -193,11 +189,19 @@ const char* getInstructionName(InstructionType type)
 	case INST_JUMP: return "jmp";
 	case INST_JUMP_IF: return "jif";
 
-	case INST_EQ: return "eq";
-	case INST_GT: return "gt";
-	case INST_LT: return "lt";
-	case INST_GEQ: return "ge";
-	case INST_LEQ: return "le";
+	case INST_IEQ: return "ieq";
+	case INST_INEQ: return "ineq";
+	case INST_IGT: return "igt";
+	case INST_ILT: return "ilt";
+	case INST_IGEQ: return "ige";
+	case INST_ILEQ: return "ile";
+
+	case INST_FEQ: return "feq";
+	case INST_FNEQ: return "fneq";
+	case INST_FGT: return "fgt";
+	case INST_FLT: return "flt";
+	case INST_FGEQ: return "fge";
+	case INST_FLEQ: return "fle";
 
 	case INST_HALT: return "stop";
 	case INST_PRINT_DEBUG: return "print";
@@ -212,7 +216,7 @@ int instructionWithOperand(InstructionType type)
 	case INST_KAPUT: return 0;
 	case INST_PUT: return 1;
 	case INST_DUP: return 1;
-	case INST_SWAP: return 0;
+	case INST_SWAP: return 1;
 
 	case INST_IPLUS: return 0;
 	case INST_IMINUS: return 0;
@@ -229,11 +233,19 @@ int instructionWithOperand(InstructionType type)
 	case INST_JUMP: return 1;
 	case INST_JUMP_IF: return 1;
 
-	case INST_EQ: return 0;
-	case INST_GT: return 0;
-	case INST_LT: return 0;
-	case INST_GEQ: return 0;
-	case INST_LEQ: return 0;
+	case INST_IEQ: return 0;
+	case INST_INEQ: return 0;
+	case INST_IGT: return 0;
+	case INST_ILT: return 0;
+	case INST_IGEQ: return 0;
+	case INST_ILEQ: return 0;
+
+	case INST_FEQ: return 0;
+	case INST_FNEQ: return 0;
+	case INST_FGT: return 0;
+	case INST_FLT: return 0;
+	case INST_FGEQ: return 0;
+	case INST_FLEQ: return 0;
 
 	case INST_HALT: return 0;
 	case INST_PRINT_DEBUG: return 0;
@@ -265,11 +277,19 @@ const char* instructionTypeAsCstr(InstructionType type)
 	case INST_JUMP: return "INST_JUMP";
 	case INST_JUMP_IF: return "INST_JUMP_IF";
 
-	case INST_EQ: return "INST_EQ";
-	case INST_GT: return "INST_GT";
-	case INST_LT: return "INST_LT";
-	case INST_GEQ: return "INST_GEQ";
-	case INST_LEQ: return "INST_LEQ";
+	case INST_IEQ: return "INST_IEQ";
+	case INST_INEQ: return "INST_INEQ";
+	case INST_IGT: return "INST_IGT";
+	case INST_ILT: return "INST_ILT";
+	case INST_IGEQ: return "INST_IGEQ";
+	case INST_ILEQ: return "INST_ILEQ";
+
+	case INST_FEQ: return "INST_FEQ";
+	case INST_FNEQ: return "INST_FNEQ";
+	case INST_FGT: return "INST_FGT";
+	case INST_FLT: return "INST_FLT";
+	case INST_FGEQ: return "INST_FGEQ";
+	case INST_FLEQ: return "INST_FLEQ";
 
 	case INST_HALT: return "INST_HALT";
 	case INST_PRINT_DEBUG: return "INST_PRINT_DEBUG";
@@ -304,11 +324,14 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 		++vm->instructionPointer;
 		break;
 	case INST_SWAP:
-		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+		if (instruction.value.asU64 >= vm->stackSize) return EX_STACK_UNDERFLOW;
 
-		Word temp = vm->stack[vm->stackSize - 1];
-		vm->stack[vm->stackSize - 1] = vm->stack[vm->stackSize - 2];
-		vm->stack[vm->stackSize - 2] = temp;
+		const uint64_t a = vm->stackSize - 1;
+		const uint64_t b = vm->stackSize - 1 - instruction.value.asU64;
+
+		Word temp = vm->stack[a];
+		vm->stack[a] = vm->stack[b];
+		vm->stack[b] = temp;
 
 		++vm->instructionPointer;
 		break;
@@ -390,46 +413,90 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 	case INST_JUMP_IF:
 		if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
 
-		if (vm->stack[vm->stackSize - 1].asU64)
-		{
-			vm->stackSize--;
-			vm->instructionPointer = instruction.value.asU64;
-		}
-		else vm->instructionPointer++;
+		if (vm->stack[vm->stackSize - 1].asU64) vm->instructionPointer = instruction.value.asU64;
+		else ++vm->instructionPointer;
 
+		--vm->stackSize;
 		break;
-	case INST_EQ:
+	case INST_IEQ:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 2].asU64 == vm->stack[vm->stackSize - 1].asU64);
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 1].asU64 == vm->stack[vm->stackSize - 2].asU64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
-	case INST_GT:
+	case INST_INEQ:
+		if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 1].asU64 = !vm->stack[vm->stackSize - 1].asU64;
+		++vm->instructionPointer;
+		break;
+	case INST_IGT:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 2].asU64 > vm->stack[vm->stackSize - 1].asU64);
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 1].asU64 > vm->stack[vm->stackSize - 2].asU64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
-	case INST_LT:
+	case INST_ILT:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 2].asU64 < vm->stack[vm->stackSize - 1].asU64);
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 1].asU64 < vm->stack[vm->stackSize - 2].asU64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
-	case INST_GEQ:
+	case INST_IGEQ:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 2].asU64 >= vm->stack[vm->stackSize - 1].asU64);
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 1].asU64 >= vm->stack[vm->stackSize - 2].asU64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
-	case INST_LEQ:
+	case INST_ILEQ:
 		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 2].asU64 <= vm->stack[vm->stackSize - 1].asU64);
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 1].asU64 <= vm->stack[vm->stackSize - 2].asU64);
+		--vm->stackSize;
+		++vm->instructionPointer;
+		break;
+	case INST_FEQ:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 1].asF64 == vm->stack[vm->stackSize - 2].asF64);
+		--vm->stackSize;
+		++vm->instructionPointer;
+		break;
+	case INST_FNEQ:
+		if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 1].asU64 = !vm->stack[vm->stackSize - 1].asF64;
+		++vm->instructionPointer;
+		break;
+	case INST_FGT:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 1].asF64 > vm->stack[vm->stackSize - 2].asF64);
+		--vm->stackSize;
+		++vm->instructionPointer;
+		break;
+	case INST_FLT:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 1].asF64 < vm->stack[vm->stackSize - 2].asF64);
+		--vm->stackSize;
+		++vm->instructionPointer;
+		break;
+	case INST_FGEQ:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 1].asF64 >= vm->stack[vm->stackSize - 2].asF64);
+		--vm->stackSize;
+		++vm->instructionPointer;
+		break;
+	case INST_FLEQ:
+		if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+
+		vm->stack[vm->stackSize - 2].asU64 = (vm->stack[vm->stackSize - 1].asF64 <= vm->stack[vm->stackSize - 2].asF64);
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
@@ -439,7 +506,12 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 	case INST_PRINT_DEBUG:
 		if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
 
-		printf("%lu\n", vm->stack[vm->stackSize - 1].asU64);
+		fprintf(stdout, "U64: %lu, I64: %ld, F64: %lf, PTR: %p\n",
+			vm->stack[vm->stackSize - 1].asU64,
+			vm->stack[vm->stackSize - 1].asI64,
+			vm->stack[vm->stackSize - 1].asF64,
+			vm->stack[vm->stackSize - 1].asPtr);
+
 		--vm->stackSize;
 		++vm->instructionPointer;
 		break;
@@ -451,7 +523,7 @@ Exception vmExecuteInstruction(QuarkVM* vm)
 	return EX_OK;
 }
 
-Exception vmExecuteProgram(QuarkVM* vm, int limit, int printOps, int debug)
+Exception vmExecuteProgram(QuarkVM* vm, int limit, int debug)
 {
 	if (debug)
 	{
@@ -463,20 +535,14 @@ Exception vmExecuteProgram(QuarkVM* vm, int limit, int printOps, int debug)
 
 	for (int i = 1; limit != 0 && !vm->halt; ++i)
 	{
-		if (printOps || debug)
+		if (debug)
 		{
 			printf("Op %d:\n", i);
 			printf("  Type: %s\n", instructionTypeAsCstr(quarkVm.program[i].type));
 
-			if (quarkVm.program[i].type == INST_PUT ||
-				quarkVm.program[i].type == INST_DUP ||
-				quarkVm.program[i].type == INST_JUMP ||
-				quarkVm.program[i].type == INST_JUMP_IF)
+			if (instructionWithOperand(quarkVm.program[i].type) == 1)
 				printf("  Value: %ld\n", quarkVm.program[i].value.asU64);
-		}
 
-		if (debug)
-		{
 			printf("\n>> ");
 			char input[256];
 
@@ -518,11 +584,9 @@ Exception vmExecuteProgram(QuarkVM* vm, int limit, int printOps, int debug)
 		}
 
 		if (quarkVm.halt) printf("[\033[1;34mINFO\033[0m]: Program halted at Op %d.\n", i);
-
 		if (limit > 0) --limit;
 	}
 
-	vmDumpStack(stdout, &quarkVm);
 	if (debug) printf("\n[\033[1;34mINFO\033[0m]: Debugger finished with %ld executed instructions (excluding INST_KAPUT).\n", quarkVm.instructionPointer);
 
 	return EX_OK;
@@ -609,137 +673,6 @@ void vmSaveProgramToFile(const QuarkVM* vm, const char* filePath)
 	}
 
 	fclose(file);
-}
-
-StringView sv_cstrAsStringView(const char* cstr)
-{
-	return (StringView)
-	{
-		.count = strlen(cstr),
-			.data = cstr,
-	};
-}
-
-StringView sv_trimStart(StringView sv)
-{
-	size_t i = 0;
-	while (i < sv.count && isspace(sv.data[i])) i += 1;
-
-	return (StringView)
-	{
-		.count = sv.count - i,
-			.data = sv.data + i,
-	};
-}
-
-StringView sv_trimEnd(StringView sv)
-{
-	size_t i = 0;
-	while (i < sv.count && isspace(sv.data[sv.count - 1 - i])) i += 1;
-
-	return (StringView)
-	{
-		.count = sv.count - i,
-			.data = sv.data,
-	};
-}
-
-StringView sv_trim(StringView sv)
-{
-	return sv_trimStart(sv_trimEnd(sv));
-}
-
-StringView sv_trimByDelimeter(StringView* sv, char delimeter)
-{
-	size_t i = 0;
-	while (i < sv->count && sv->data[i] != delimeter) i += 1;
-
-	StringView result =
-	{
-		.count = i,
-			.data = sv->data,
-	};
-
-	if (i < sv->count)
-	{
-		sv->count -= i + 1;
-		sv->data += i + 1;
-	}
-	else
-	{
-		sv->count -= i;
-		sv->data += i;
-	}
-
-	return result;
-}
-
-int sv_equals(StringView a, StringView b)
-{
-	if (a.count != b.count) return 0;
-	else return memcmp(a.data, b.data, a.count) == 0;
-}
-
-int sv_toInt(StringView sv)
-{
-	int result = 0;
-
-	for (size_t i = 0; i < sv.count && isdigit(sv.data[i]); ++i)
-		result = result * 10 + sv.data[i] - '0';
-
-	return result;
-}
-
-StringView sv_readFile(const char* filePath)
-{
-	FILE* file = fopen(filePath, "r");
-	if (file == NULL)
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not open file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	if (fseek(file, 0, SEEK_END) < 0)
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	long fileSize = ftell(file);
-	if (fileSize < 0)
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	char* fileContent = malloc(fileSize + 1);
-	if (fileContent == NULL)
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not allocate memory for file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	if (fseek(file, 0, SEEK_SET) < 0)
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	size_t readBytes = fread(fileContent, 1, fileSize, file);
-	if (ferror(file))
-	{
-		fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	fileContent[fileSize] = '\0';
-
-	fclose(file);
-	return (StringView)
-	{
-		.count = readBytes,
-			.data = fileContent,
-	};
 }
 
 InstructionAddress vmTableFindAddress(const VMTable* table, StringView label)
@@ -847,6 +780,10 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 				vm->program[vm->programSize++] = (Instruction)
 			{
 				.type = INST_SWAP,
+				.value =
+					{
+						.asI64 = sv_toInt(operand)
+					},
 			};
 			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_IPLUS))))
 				vm->program[vm->programSize++] = (Instruction)
@@ -900,45 +837,97 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 			};
 			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_JUMP))))
 			{
-				vmTablePushDelayedOperand(vmTable, vm->programSize, operand);
-				vm->program[vm->programSize++] = (Instruction)
+				if (operand.count > 0 && isdigit(*operand.data))
 				{
-					.type = INST_JUMP,
-				};
+					vm->program[vm->programSize++] = (Instruction)
+					{
+						.type = INST_JUMP,
+						.value =
+							{
+								.asI64 = sv_toInt(operand)
+							},
+					};
+				}
+				else
+				{
+					vmTablePushDelayedOperand(vmTable, vm->programSize, operand);
+					vm->program[vm->programSize++] = (Instruction)
+					{
+						.type = INST_JUMP,
+					};
+				}
 			}
 			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_JUMP_IF))))
-				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_JUMP_IF,
-				.value =
+				if (operand.count > 0 && isdigit(*operand.data))
+				{
+					vm->program[vm->programSize++] = (Instruction)
 					{
-						.asI64 = sv_toInt(operand)
-					},
-			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_EQ))))
+						.type = INST_JUMP_IF,
+						.value =
+							{
+								.asI64 = sv_toInt(operand)
+							},
+					};
+				}
+				else
+				{
+					vmTablePushDelayedOperand(vmTable, vm->programSize, operand);
+					vm->program[vm->programSize++] = (Instruction)
+					{
+						.type = INST_JUMP_IF,
+					};
+				}
+			}
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_IEQ))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_EQ,
+				.type = INST_IEQ,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_GT))))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_INEQ))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_GT,
+				.type = INST_INEQ,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_LT))))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_IGT))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_LT,
+				.type = INST_IGT,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_GEQ))))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_ILT))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_GEQ,
+				.type = INST_ILT,
 			};
-			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_LEQ))))
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_IGEQ))))
 				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_LEQ,
+				.type = INST_IGEQ,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_ILEQ))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_ILEQ,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_FGT))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_FGT,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_FLT))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_FLT,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_FGEQ))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_FGEQ,
+			};
+			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_FLEQ))))
+				vm->program[vm->programSize++] = (Instruction)
+			{
+				.type = INST_FLEQ,
 			};
 			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_HALT))))
 				vm->program[vm->programSize++] = (Instruction)
@@ -946,10 +935,12 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 				.type = INST_HALT,
 			};
 			else if (sv_equals(instructionName, sv_cstrAsStringView(getInstructionName(INST_PRINT_DEBUG))))
-				vm->program[vm->programSize++] = (Instruction)
 			{
-				.type = INST_PRINT_DEBUG,
-			};
+				vm->program[vm->programSize++] = (Instruction)
+				{
+					.type = INST_PRINT_DEBUG,
+				};
+			}
 			else
 			{
 				fprintf(stderr, "[\033[1;31mERROR\033[0m]: Invalid instruction '%.*s'\n", (int)instructionName.count, instructionName.data);
@@ -962,4 +953,4 @@ void vmParseSource(StringView source, QuarkVM* vm, VMTable* vmTable)
 		vm->program[vmTable->delayedOperands[i].address].value.asU64 = (InstructionAddress)vmTableFindAddress(vmTable, vmTable->delayedOperands[i].label);
 }
 
-#endif
+#endif //! QUARK_VM_COMPILER_IMPLEMENTATION
