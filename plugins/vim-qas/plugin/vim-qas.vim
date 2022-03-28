@@ -1,7 +1,7 @@
 " Vim/Neovim syntax file
 " Language: QuarkLang Assembly
 
-" Copyright 2021-Present Siddharth Praveen Bharadwaj
+" Copyright 2022-Present Siddharth Praveen Bharadwaj
 
 " Permission is hereby granted, free of charge, to any person
 " obtaining a copy of this software and associated documentation

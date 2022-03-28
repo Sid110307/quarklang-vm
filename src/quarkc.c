@@ -55,7 +55,7 @@ int main(int argc, char** argv)
 					Exception exception = vmExecuteProgram(&quarkVm, VM_EXECUTION_LIMIT, debug);
 					if (exception != EX_OK)
 					{
-						// vmDumpStack(stdout, &quarkVm);
+						vmDumpStack(stdout, &quarkVm);
 						return EXIT_FAILURE;
 					}
 				}

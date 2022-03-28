@@ -1,6 +1,6 @@
 ;;; qas-mode.el --- Major mode for editing QuarkLang Assembly source files -*- lexical-binding:t -*-
 
-;; Copyright 2021-Present Siddharth Praveen Bharadwaj
+;; Copyright 2022-Present Siddharth Praveen Bharadwaj
 
 ;; Permission is hereby granted, free of charge, to any person
 ;; obtaining a copy of this software and associated documentation
