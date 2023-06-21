@@ -5,40 +5,43 @@
 https://github.com/Sid110307/quarklang-vm/actions/workflows/makefile.yml/badge.svg?branch=master)
 
 > The QuarkLang Virtual Machine.
+>
+> QuarkLang is a simple, stack-based, assembly-like language.
 
 ## Getting Started
+
+### Prerequisites
+
+- [Git](https://git-scm.com/)
+- A C compiler ([GCC](https://gcc.gnu.org/), [Clang](https://clang.llvm.org/), etc.)
+- [GNU Make](https://www.gnu.org/software/make/)
 
 ### Building from source
 
 - Clone the repository:
 
-  - Git Clone via HTTPS:
+    - Via HTTPS:
 
-      ```sh
-      $ git clone https://github.com/Sid110307/quarklang-vm.git
-      # Cloning into 'quarklang-vm'...
-      ```
+        ```sh
+        $ git clone https://github.com/Sid110307/quarklang-vm.git
+        ```
 
-  - GitHub CLI:
+    - GitHub CLI:
 
-      ```sh
-      $ gh repo clone Sid110307/quarklang-vm
-      # Cloning into 'quarklang-vm'...
-      ```
+        ```sh
+        $ gh repo clone Sid110307/quarklang-vm
+        ```
 
 - Enter the directory:
 
 ```sh
 $ cd quarklang-vm
-# user@host:~/quarklang-vm$
 ```
 
 - Run `make`:
 
 ```sh
 $ make -s
-# Building interpreter... Done.
-# Building compiler... Done.
 ```
 
 ### Installation
@@ -47,19 +50,18 @@ $ make -s
 
 ```sh
 $ make install -s
-# Installing for system...
 ```
 
 - To install for the current user:
 
 ```sh
 $ make install-user -s
-# Installing for user 'user'...
 ```
 
-### Compiling and running the code
+### Compiling and running programs
 
-- To compile a QuarkLang Assembly file (`.qas`) into a QuarkLang Compiled Executable (`.qce`) file, run `quarki` with a file argument:
+- To compile a QuarkLang Assembly file (`.qas`) into a QuarkLang Compiled Executable (`.qce`) file, run `quarki` with a
+  file argument:
 
 ```sh
 $ quarki -f <source.qas>
@@ -98,10 +100,10 @@ $ quarkc --debug -f <source.qas>
 
 ## Examples
 
-Check the [examples](https://github.com/Sid110307/quarklang-vm/tree/master/examples) folder for examples.
+Check the [examples](examples) folder for examples.
 
 Run them with `make examples -s`.
 
-## [License](https://github.com/Sid110307/quarklang-vm/tree/master/LICENSE)
+## License
 
-Licensed under the [MIT](https://opensource.org/licenses/MIT) license.
+[MIT](https://opensource.org/licenses/MIT)

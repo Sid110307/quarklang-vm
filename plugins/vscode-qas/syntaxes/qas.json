@@ -1,54 +1,54 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "QuarkLang Assembly",
-	"patterns": [
-		{
-			"include": "#keywords"
-		},
-		{
-			"include": "#strings"
-		}
-	],
-	"repository": {
-		"keywords": {
-			"patterns": [
-				{
-					"name": "keyword.control",
-					"match": "\\b(put|kaput|dup|swap|jmp|jif|stop|print)\\b"
-				},
-				{
-					"name": "keyword.operator",
-					"match": "\\b(iplus|iminus|imul|idiv|imod|fplus|fminus|fmul|fdiv|fmod)\\b"
-				},
-				{
-					"name": "entity.name.function",
-					"match": "\\b(\\w+)\\b\\s*:\\s*"
-				},
-				{
-					"name": "keyword.other",
-					"match": "\\b(ieq|ineq|ilt|igt|ile|ige|flt|fgt|fle|fge)\\b"
-				},
-				{
-					"name": "constant.numeric",
-					"match": "\\b(0|[1-9][0-9]*)(\\.[0-9]+)?\\b"
-				},
-				{
-					"name": "comment.line.double-dash",
-					"match": "--.*$"
-				}
-			]
-		},
-		"strings": {
-			"name": "string.quoted.double.qas",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.qas",
-					"match": "\\\\."
-				}
-			]
-		}
-	},
-	"scopeName": "source.qas"
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "QuarkLang Assembly",
+    "patterns": [
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control",
+                    "match": "\\b(put|kaput|dup|swap|release|jmp|jif|return|invoke|native|stop)\\b"
+                },
+                {
+                    "name": "keyword.operator",
+                    "match": "\\b(iplus|iminus|imul|idiv|imod|fplus|fminus|fmul|fdiv|fmod)\\b"
+                },
+                {
+                    "name": "entity.name.function",
+                    "match": "\\b(\\w+)\\b\\s*:\\s*"
+                },
+                {
+                    "name": "keyword.other",
+                    "match": "\\b(ieq|ineq|ilt|igt|ile|ige|flt|fgt|fle|fge)\\b"
+                },
+                {
+                    "name": "constant.numeric",
+                    "match": "\\b(0|[1-9][0-9]*)(\\.[0-9]+)?\\b"
+                },
+                {
+                    "name": "comment.line.double-dash",
+                    "match": "--.*$"
+                }
+            ]
+        },
+        "strings": {
+            "name": "string.quoted.double.qas",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.qas",
+                    "match": "\\\\."
+                }
+            ]
+        }
+    },
+    "scopeName": "source.qas"
 }

@@ -1,0 +1,57 @@
+-- Copyright 2022-Present Siddharth Praveen Bharadwaj
+-- https://sid110307.github.io/Sid110307
+--
+-- QuarkLang Assembly program for linear interpolation (https://en.wikipedia.org/wiki/Linear_interpolation)
+
+jmp main
+
+lerp:
+    -- Calculate intermediate values
+	dup 3
+	dup 3
+	dup 1
+	fminus
+
+    -- Calculate final value
+	dup 3
+	fmul
+	fplus
+
+	-- Clean up
+	swap 2
+	release
+	swap 2
+	release
+	swap 2
+	release
+	return
+
+main:
+	put 69.0 -- a
+	put 420.0 -- b
+	put 0.0 -- t
+	put 1.0 -- 1
+	put 10.0 -- n
+	fdiv
+
+loop:
+    -- Interpolate
+	dup 3
+	dup 3
+	dup 3
+	invoke lerp
+	native 2
+
+    -- Step to next value
+	swap 1
+	dup 1
+	fplus
+	swap 1
+
+    -- Loop if not done
+	dup 1
+	put 1.0
+	fge
+	jif loop
+
+	stop

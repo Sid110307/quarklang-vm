@@ -1,5 +1,5 @@
 *.qce
-bin/*
-.idea
-node_modules
-*.vsix
+bin/
+
+.vscode/
+.idea/

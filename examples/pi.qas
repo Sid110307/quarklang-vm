@@ -1,0 +1,48 @@
+-- Copyright 2022-Present Siddharth Praveen Bharadwaj
+-- https://sid110307.github.io/Sid110307
+--
+-- QuarkLang Assembly program for calculating Pi (~3.14)
+
+put 4.0 -- Accumulator
+put 3.0 -- Denominator
+put 750000 -- Iterations
+
+loop:
+	-- Calculate next denominator
+	swap 2
+	put 4.0
+	dup 2
+	put 2.0
+	fplus
+	swap 3
+
+	-- Calculate with current denominator
+	fdiv
+	fminus
+
+	-- Calculate next denominator
+	put 4.0
+	dup 2
+	put 2.0
+	fplus
+	swap 3
+
+	-- Calculate with current denominator
+	fdiv
+	fplus
+
+	-- Decrement iteration count
+	swap 2
+	put 1
+	iminus
+
+	dup 0
+	jif loop
+
+-- Clean the stack
+release
+release
+
+-- Print the result
+native 2
+stop

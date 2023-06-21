@@ -1,23 +1,65 @@
 name: Makefile CI
 
-on:
-    push:
-        branches: [master]
-    pull_request:
-        branches: [master]
+on: [ push, pull_request ]
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
-        steps:
-            - uses: actions/checkout@v2
+      - name: Clean and build binaries
+        run: make -s
+        env:
+          CC: gcc
 
-            - name: Clean and Build Binaries
-              run: make -s
+      - name: Compile examples
+        run: make examples -s
 
-            - name: Compile Examples
-              run: make examples -s
+      - name: Clean binaries again
+        run: make clean -s
 
-            - name: Clean Binaries again
-              run: make clean -s
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Clean and build binaries
+        run: make -s
+        env:
+          CC: clang
+
+      - name: Compile examples
+        run: make examples -s
+
+      - name: Clean binaries again
+        run: make clean -s
+
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: git mingw-w64-ucrt-x86_64-gcc make
+
+      - name: Run build script
+        run: |
+          chmod +x ci-build.sh
+          ./ci-build.sh
+
+      - name: Clean and build binaries
+        run: make -s
+        env:
+          CC: gcc
+
+      - name: Compile examples
+        run: make examples -s
+
+      - name: Clean binaries again
+        run: make clean -s

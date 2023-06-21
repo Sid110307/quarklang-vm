@@ -1,0 +1,16 @@
+-- Copyright 2022-Present Siddharth Praveen Bharadwaj
+-- https://sid110307.github.io/Sid110307
+--
+-- QuarkLang Assembly program for testing pointer allocation
+
+-- Allocate 4 bytes of memory
+put 420
+native 0
+
+-- Print the allocated memory address
+dup 0
+native 4
+
+-- Free the allocated memory
+native 1
+stop

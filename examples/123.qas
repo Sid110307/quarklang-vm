@@ -1,16 +1,19 @@
 -- Copyright 2022-Present Siddharth Praveen Bharadwaj
 -- https://sid110307.github.io/Sid110307
 --
--- QuarkLang Assembly program for 1 2 3 (floating-point numbers)
+-- QuarkLang Assembly program for adding 1, 2, and 3
 
 -- Push the 3 numbers onto the stack
-put 1.0
-put 2.0
-put 3.0
+put 1
+put 2
+put 3
 
 -- Add the numbers
-fplus
-fplus
+iplus
+iplus
+
+-- Print the result
+native 3
 
 -- Halt the execution
 stop

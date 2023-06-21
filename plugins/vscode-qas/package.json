@@ -1,35 +1,36 @@
 {
-	"name": "vscode-qas",
-	"displayName": "QuarkLang VM Language Support",
-	"description": "VS Code Language Support for QuarkLang Assembly (QAS) files",
-	"version": "1.0.0",
-	"repository": "https://github.com/Sid110307/quarklang-vm/tree/master/plugins/vscode-qas",
-	"engines": {
-		"vscode": "^1.63.0"
-	},
-	"categories": [
-		"Programming Languages"
-	],
-	"contributes": {
-		"languages": [
-			{
-				"id": "qas",
-				"aliases": [
-					"QuarkLang Assembly",
-					"qas"
-				],
-				"extensions": [
-					".qas"
-				],
-				"configuration": "./language-configuration.json"
-			}
-		],
-		"grammars": [
-			{
-				"language": "qas",
-				"scopeName": "source.qas",
-				"path": "./syntaxes/qas.json"
-			}
-		]
-	}
+    "name": "vscode-qas",
+    "displayName": "QuarkLang VM Language Support",
+    "description": "VS Code Language Support for QuarkLang Assembly (QAS) files",
+    "version": "1.0.0",
+    "publisher": "sid110307",
+    "repository": "https://github.com/Sid110307/quarklang-vm/tree/master/plugins/vscode-qas",
+    "engines": {
+        "vscode": "^1.63.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "qas",
+                "aliases": [
+                    "QuarkLang Assembly",
+                    "qas"
+                ],
+                "extensions": [
+                    ".qas"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "qas",
+                "scopeName": "source.qas",
+                "path": "./syntaxes/qas.json"
+            }
+        ]
+    }
 }

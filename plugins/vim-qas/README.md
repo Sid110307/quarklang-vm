@@ -5,6 +5,7 @@ ViM (Vi-Improved) Language Support for QuarkLang Assembly (QAS) files
 ## Features
 
 - Syntax highlighting
+
 <!-- - Code completion -->
 <!-- - Linter -->
 <!-- - Easy Compilation/Execution -->

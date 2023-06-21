@@ -8,11 +8,13 @@ put 1.0 -- `n` factorial
 put 1.0 -- Sum
 
 loop:
+    -- Initialize counter
 	put 1.0
 	dup 2
 	fdiv
 	fplus
 
+    -- Calculate `n` factorial
 	swap 2
 	put 1.0
 	fplus
@@ -20,13 +22,22 @@ loop:
 	swap 2
 	fmul
 
+    -- Increment counter
 	swap 1
 	swap 2
 	dup 2
-	put 100.0
 
+    -- Loop if counter < 100
+	put 100.0
 	fge
 	jif loop
-	
-	print
+	native 2
+
+	-- Clean up
+	swap 1
+	release
+	swap 1
+	release
+
+    -- Print the result
 	stop
