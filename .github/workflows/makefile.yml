@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Clean and build binaries
+      - name: Build binaries
         run: make -s
         env:
           CC: gcc
@@ -16,24 +16,18 @@ jobs:
       - name: Compile examples
         run: make examples -s
 
-      - name: Clean binaries again
-        run: make clean -s
-
   build-macos:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Clean and build binaries
+      - name: Build binaries
         run: make -s
         env:
           CC: clang
 
       - name: Compile examples
         run: make examples -s
-
-      - name: Clean binaries again
-        run: make clean -s
 
   build-windows:
     runs-on: windows-latest
@@ -48,18 +42,10 @@ jobs:
           update: true
           install: git mingw-w64-ucrt-x86_64-gcc make
 
-      - name: Run build script
-        run: |
-          chmod +x ci-build.sh
-          ./ci-build.sh
-
-      - name: Clean and build binaries
+      - name: Build binaries
         run: make -s
         env:
           CC: gcc
 
       - name: Compile examples
         run: make examples -s
-
-      - name: Clean binaries again
-        run: make clean -s

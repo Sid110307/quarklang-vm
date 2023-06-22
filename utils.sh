@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 install_vim() {
-  sudo mkdir -p "$HOME/.vim/pack/plugins/start/"
-  sudo cp -r "plugins/vim-qas/" "$HOME/.vim/pack/plugins/start/"
+  mkdir -p "$HOME/.vim/pack/plugins/start/"
+  cp -r "plugins/vim-qas/" "$HOME/.vim/pack/plugins/start/"
 
   if ! grep -q "autocmd BufRead,BufNewFile *.qas set filetype=qas" "$HOME/.vimrc"; then
     echo "autocmd BufRead,BufNewFile *.qas set filetype=qas" >>"$HOME/.vimrc"
@@ -12,8 +12,8 @@ install_vim() {
 }
 
 install_neovim() {
-  sudo mkdir -p "$HOME/.local/share/nvim/site/pack/plugins/start/"
-  sudo cp -r "plugins/vim-qas/" "$HOME/.local/share/nvim/site/pack/plugins/start/"
+  mkdir -p "$HOME/.local/share/nvim/site/pack/plugins/start/"
+  cp -r "plugins/vim-qas/" "$HOME/.local/share/nvim/site/pack/plugins/start/"
 
   if ! grep -q "autocmd BufRead,BufNewFile *.qas set filetype=qas" "$HOME/.config/nvim/init.vim"; then
     echo "autocmd BufRead,BufNewFile *.qas set filetype=qas" >>"$HOME/.config/nvim/init.vim"
@@ -26,8 +26,8 @@ install_neovim() {
 }
 
 install_emacs() {
-  sudo mkdir -p "$HOME/.emacs.d/elisp"
-  sudo cp -r "plugins/emacs-qas/qas-mode.el" "$HOME/.emacs.d/elisp/qas-mode.el"
+  mkdir -p "$HOME/.emacs.d/elisp"
+  cp -r "plugins/emacs-qas/qas-mode.el" "$HOME/.emacs.d/elisp/qas-mode.el"
 
   if ! grep -q "qas-mode" "$HOME/.emacs"; then
     echo "(add-to-list 'load-path \"$HOME/.emacs.d/elisp\")" >>"$HOME/.emacs"
@@ -40,7 +40,7 @@ install_emacs() {
 install_vscode() {
   if ! command -v vsce &>/dev/null; then
     dialog --title "QuarkLang VM Extension Installer" --msgbox "vsce is not installed. Press OK to install it." 0 0
-    sudo npm install -g vsce
+    npm install -g vsce
   fi
 
   cd ./plugins/vscode-qas || {
@@ -73,7 +73,7 @@ if [ "$1" == "extensions" ]; then
   clear
 elif [ "$1" == "bash" ]; then
   if ! grep -q "export PATH=\"/usr/local/quark:$$PATH\"" "$HOME/.bashrc"; then
-    echo "# add quarklang vm to PATH" | sudo tee -a "$HOME/.bashrc"
-    echo "export PATH=\"/usr/local/quark:$$PATH\"" | sudo tee -a "$HOME/.bashrc"
+    echo "# add quarklang vm to PATH" | tee -a "$HOME/.bashrc"
+    echo "export PATH=\"/usr/local/quark:$$PATH\"" | tee -a "$HOME/.bashrc"
   fi
 fi

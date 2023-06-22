@@ -5,7 +5,7 @@ LIBS=-lm
 EXAMPLES=$(patsubst %.qas,%.qce,$(wildcard ./examples/*.qas))
 
 .PHONY: all examples
-all: clean interpreter compiler disassembler
+all: interpreter compiler disassembler
 
 help:
 	@echo "\033[1mUsage\033[0m: make <target> [-s | --silent]"
@@ -24,20 +24,20 @@ help:
 
 interpreter: src/quarki.c src/include/compiler.h
 	@echo -n "\033[1;36mBuilding interpreter... \033[0m"
-	sudo mkdir -p bin
-	sudo $(CC) $(CFLAGS) $(CWARNINGS) -o bin/quarki $< $(LIBS)
+	mkdir -p bin
+	$(CC) $(CFLAGS) $(CWARNINGS) -o bin/quarki $< $(LIBS)
 	@echo "\033[1;32mDone.\033[0m"
 
 compiler: src/quarkc.c src/include/compiler.h
 	@echo -n "\033[1;36mBuilding compiler... \033[0m"
-	sudo mkdir -p bin
-	sudo $(CC) $(CFLAGS) $(CWARNINGS) -o bin/quarkc $< $(LIBS)
+	mkdir -p bin
+	$(CC) $(CFLAGS) $(CWARNINGS) -o bin/quarkc $< $(LIBS)
 	@echo "\033[1;32mDone.\033[0m"
 
 disassembler: src/unquark.c src/include/compiler.h
 	@echo -n "\033[1;36mBuilding disassembler... \033[0m"
-	sudo mkdir -p bin
-	sudo $(CC) $(CFLAGS) $(CWARNINGS) -o bin/unquark $< $(LIBS)
+	mkdir -p bin
+	$(CC) $(CFLAGS) $(CWARNINGS) -o bin/unquark $< $(LIBS)
 	@echo "\033[1;32mDone.\033[0m"
 
 examples: $(EXAMPLES)
@@ -51,7 +51,7 @@ examples/%.qce: interpreter compiler examples/%.qas
 install:
 	@echo -n "\033[1;36mInstalling binaries... \033[0m"
 
-	sudo mkdir -p /usr/local/quark
+	mkdir -p /usr/local/quark
 	sudo cp bin/quarki /usr/local/quark/quarki
 	sudo cp bin/quarkc /usr/local/quark/quarkc
 	sudo cp bin/unquark /usr/local/quark/unquark
@@ -63,16 +63,12 @@ install:
 install-user:
 	@echo -n "\033[1;36mInstalling binaries for user $(USER)... \033[0m"
 
-	sudo mkdir -p $(HOME)/.local/share/quark
+	mkdir -p $(HOME)/.local/share/quark
 	sudo cp bin/quarki $(HOME)/.local/share/quark/quarki
 	sudo cp bin/quarkc $(HOME)/.local/share/quark/quarkc
 	sudo cp bin/unquark $(HOME)/.local/share/quark/unquark
 
-	if ! grep -q 'export PATH="$(HOME)/.local/share/quark:$$PATH"' $(HOME)/.bashrc; then\
-		sudo echo '# add quarklang vm to PATH' >> $(HOME)/.bashrc;\
-		sudo echo 'export PATH="$$HOME/.local/share/quark:$$PATH"' >> $(HOME)/.bashrc;\
-	fi
-
+	./utils.sh bash
 	@echo "\033[1;32mDone.\033[0m"
 	@echo "\033[1;36mReload your terminal or run 'source ~/.bashrc' to use the new binaries.\033[0m"
 
