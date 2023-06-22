@@ -5,7 +5,7 @@
 
 put 4.0 -- Accumulator
 put 3.0 -- Denominator
-put 750000 -- Iterations
+put 75000 -- Counter
 
 loop:
 	-- Calculate next denominator

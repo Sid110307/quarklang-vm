@@ -9,7 +9,7 @@ all: interpreter compiler disassembler
 
 help:
 	@echo "\033[1mUsage\033[0m: make <target> [-s | --silent]"
-	@echo "\033[1mRun with -s or --silent to hide the output commands (\033[0;34mRECOMMENDED\033[0m)\033[0m\n"
+	@echo "\033[1mRun with -s or --silent to hide the output commands (\033[1;34mRECOMMENDED\033[0m)\033[0m\n"
 	@echo "Available targets:"
 	@echo "\033[1;36m  all\033[0m: Compile all targets."
 	@echo "\033[1;36m  interpreter\033[0m: Build the interpreter."
@@ -43,10 +43,9 @@ disassembler: src/unquark.c src/include/compiler.h
 examples: $(EXAMPLES)
 
 examples/%.qce: interpreter compiler examples/%.qas
-	@echo -n "\033[1;36mRunning example \033[0m$(word 3, $^)\033[1;36m...\033[0m "
+	@echo "\033[1;36mRunning example \033[0m$(word 3, $^)\033[1;36m...\033[0m "
 	./bin/quarki -f $(word 3, $^) >/dev/null
 	./bin/quarkc -f $@
-	@echo
 
 install:
 	@echo -n "\033[1;36mInstalling binaries... \033[0m"
@@ -77,5 +76,5 @@ ext-install:
 
 clean:
 	@echo -n "\033[1;36mCleaning... \033[0m"
-	sudo rm -rf bin/* /usr/local/quark $(HOME)/.local/share/quark
+	sudo rm -rf bin/* /usr/local/quark $(HOME)/.local/share/quark examples/*.qce
 	@echo "\033[1;32mDone.\033[0m"

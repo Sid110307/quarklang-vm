@@ -69,7 +69,6 @@ typedef enum
     INST_FLEQ,
 
     INST_HALT,
-    TOTAL_INST_COUNT,
 } InstructionType;
 
 typedef union
@@ -238,7 +237,6 @@ static const char *getInstructionName(InstructionType type)
 
         case INST_HALT:
             return "stop";
-        case TOTAL_INST_COUNT:
         default:
             assert(0 && "[instructionName]: Unreachable");
     }
@@ -283,7 +281,6 @@ static int instructionWithOperand(InstructionType type)
         case INST_INVOKE:
         case INST_NATIVE:
             return 1;
-        case TOTAL_INST_COUNT:
         default:
             assert(0 && "[instructionWithOperand]: Unreachable");
     }
@@ -437,7 +434,7 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
         case INST_INVOKE:
             if (vm->stackSize >= VM_STACK_CAPACITY) return EX_STACK_OVERFLOW;
 
-            vm->stack[++vm->stackSize].asI64 = (int64_t) vm->instructionPointer + 1;
+            vm->stack[vm->stackSize].asI64 = (int64_t) vm->instructionPointer + 1;
             vm->instructionPointer = instruction.value.asI64;
 
             break;
@@ -556,7 +553,6 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
         case INST_HALT:
             vm->halt = 1;
             break;
-        case TOTAL_INST_COUNT:
         default:
             return EX_INVALID_INSTRUCTION;
     }
@@ -720,13 +716,13 @@ static int64_t vmTableFindAddress(const VMTable *table, StringView label)
 static void vmTablePushFunction(VMTable *table, StringView label, int64_t address)
 {
     assert(table->functionSize < VM_CAPACITY && "Number of functions exceeds VM capacity.");
-    table->functions[++table->functionSize] = (Function) {label, address};
+    table->functions[table->functionSize++] = (Function) {label, address};
 }
 
 static void vmTablePushDelayedOperand(VMTable *table, int64_t address, StringView label)
 {
     assert(table->delayedOperandSize < VM_CAPACITY && "Number of delayed operands exceeds VM capacity.");
-    table->delayedOperands[++table->delayedOperandSize] = (DelayedOperand) {label, address};
+    table->delayedOperands[table->delayedOperandSize++] = (DelayedOperand) {label, address};
 }
 
 static Word numberToWord(StringView source)
@@ -861,7 +857,8 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
                     vm->program[vm->programSize++] = (Instruction) {INST_HALT, {0}};
                 else
                 {
-                    fprintf(stderr, "[\033[1;31mERROR\033[0m]: (In file `%s`) Invalid instruction `%.*s` on line %d\n",
+                    fprintf(stderr,
+                            "[\033[1;31mERROR\033[0m]: (In file `%s`): Invalid instruction `%.*s` on line %d.\n",
                             inputFilePath, (int) token.count, token.data, lineNumber);
                     exit(EXIT_FAILURE);
                 }

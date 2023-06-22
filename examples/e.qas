@@ -31,7 +31,6 @@ loop:
 	put 100.0
 	fge
 	jif loop
-	native 2
 
 	-- Clean up
 	swap 1
@@ -40,4 +39,5 @@ loop:
 	release
 
     -- Print the result
+	native 2
 	stop

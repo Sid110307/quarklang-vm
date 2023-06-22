@@ -3,34 +3,30 @@
 --
 -- QuarkLang Assembly program for Fibonacci sequence
 
-main:
-	put 0 -- F(0)
-	put 1 -- F(1)
-	put 30 -- Iterations
+put 0 -- F(0)
+put 1 -- F(1)
+put 10 -- Iterations
 
 loop:
     -- F(n) = F(n-1) + F(n-2)
-	swap 2
-	dup 0
-	native 3
+    swap 2
+    dup 0
+    native 3
 
-    -- F(n-1)
-	dup 1
-	iplus
+    -- F(n-1) = F(n)
+    dup 1
+    iplus
+    swap 1
+    swap 2
 
-    -- F(n-2)
-	swap 1
-	swap 2
-	put 1
-	iminus
-
-    -- Check if the last element is equal to 0
-	dup 0
-	put 0
-	ieq
+    -- F(n-2) = F(n-1)
+    put 1
+    iminus
+    dup 0
+    put 0
+    ieq
 
     -- Loop if not equal
-	ineq
-	jif loop
-
-	stop
+    ineq
+    jif loop
+    stop
