@@ -94,7 +94,7 @@ struct QuarkVM
     int64_t stackSize;
 
     Instruction program[VM_CAPACITY];
-    int64_t programSize;
+    int programSize;
     int64_t instructionPointer;
 
     NativeVM nativeFunctions[VM_CAPACITY];
@@ -105,13 +105,13 @@ struct QuarkVM
 
 typedef struct
 {
-    StringView label;
+    StringView function;
     int64_t address;
 } Function;
 
 typedef struct
 {
-    StringView label;
+    StringView function;
     int64_t address;
 } DelayedOperand;
 
@@ -294,13 +294,13 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
     switch (instruction.type)
     {
         case INST_KAPUT:
-            ++vm->instructionPointer;
+            vm->instructionPointer++;
             break;
         case INST_PUT:
             if (vm->stackSize >= VM_STACK_CAPACITY) return EX_STACK_OVERFLOW;
 
             vm->stack[vm->stackSize++] = instruction.value;
-            ++vm->instructionPointer;
+            vm->instructionPointer++;
 
             break;
         case INST_DUP:
@@ -309,50 +309,47 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize] = vm->stack[vm->stackSize - instruction.value.asI64 - 1];
             ++vm->stackSize;
-            ++vm->instructionPointer;
+            vm->instructionPointer++;
 
             break;
         case INST_SWAP:
             if (instruction.value.asI64 >= (int64_t) vm->stackSize) return EX_STACK_UNDERFLOW;
 
-            const int64_t a = vm->stackSize - 1;
-            const int64_t b = vm->stackSize - 1 - instruction.value.asI64;
+            Word temp = vm->stack[vm->stackSize - 1];
+            vm->stack[vm->stackSize - 1] = vm->stack[vm->stackSize - instruction.value.asI64 - 1];
+            vm->stack[vm->stackSize - instruction.value.asI64 - 1] = temp;
+            vm->instructionPointer++;
 
-            Word temp = vm->stack[a];
-            vm->stack[a] = vm->stack[b];
-            vm->stack[b] = temp;
-
-            ++vm->instructionPointer;
             break;
         case INST_RELEASE:
-            if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
+            if (vm->stackSize <= 0) return EX_STACK_UNDERFLOW;
 
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_IPLUS:
             if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 2].asI64 += vm->stack[vm->stackSize - 1].asI64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_IMINUS:
             if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 2].asI64 -= vm->stack[vm->stackSize - 1].asI64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_IMUL:
             if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 2].asI64 *= vm->stack[vm->stackSize - 1].asI64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_IDIV:
@@ -360,39 +357,39 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
             if (vm->stack[vm->stackSize - 1].asI64 == 0) return EX_DIVIDE_BY_ZERO;
 
             vm->stack[vm->stackSize - 2].asI64 /= vm->stack[vm->stackSize - 1].asI64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_IMOD:
             if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 2].asI64 %= vm->stack[vm->stackSize - 1].asI64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_FPLUS:
             if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 2].asF64 += vm->stack[vm->stackSize - 1].asF64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
             break;
         case INST_FMINUS:
             if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 2].asF64 -= vm->stack[vm->stackSize - 1].asF64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_FMUL:
             if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 2].asF64 *= vm->stack[vm->stackSize - 1].asF64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_FDIV:
@@ -400,8 +397,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
             if (vm->stack[vm->stackSize - 1].asF64 == 0.0) return EX_DIVIDE_BY_ZERO;
 
             vm->stack[vm->stackSize - 2].asF64 /= vm->stack[vm->stackSize - 1].asF64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_FMOD:
@@ -409,8 +406,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize - 2].asF64 = fmod(vm->stack[vm->stackSize - 2].asF64,
                                                       vm->stack[vm->stackSize - 1].asF64);
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_JUMP:
@@ -420,15 +417,15 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
             if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 1].asI64 ? vm->instructionPointer = instruction.value.asI64
-                                               : ++vm->instructionPointer;
-            --vm->stackSize;
+                                               : vm->instructionPointer++;
+            vm->stackSize--;
 
             break;
         case INST_RETURN:
             if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
 
             vm->instructionPointer = vm->stack[vm->stackSize - 1].asI64;
-            --vm->stackSize;
+            vm->stackSize--;
 
             break;
         case INST_INVOKE:
@@ -444,22 +441,22 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
             const Exception exception = vm->nativeFunctions[instruction.value.asI64](vm);
             if (exception != EX_OK) return exception;
 
-            ++vm->instructionPointer;
+            vm->instructionPointer++;
             break;
         case INST_IEQ:
             if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 2].asI64 =
                     vm->stack[vm->stackSize - 1].asI64 == vm->stack[vm->stackSize - 2].asI64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_INEQ:
             if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 1].asI64 = !vm->stack[vm->stackSize - 1].asI64;
-            ++vm->instructionPointer;
+            vm->instructionPointer++;
 
             break;
         case INST_IGT:
@@ -467,8 +464,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize - 2].asI64 =
                     vm->stack[vm->stackSize - 1].asI64 > vm->stack[vm->stackSize - 2].asI64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_ILT:
@@ -476,8 +473,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize - 2].asI64 =
                     vm->stack[vm->stackSize - 1].asI64 < vm->stack[vm->stackSize - 2].asI64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_IGEQ:
@@ -485,8 +482,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize - 2].asI64 =
                     vm->stack[vm->stackSize - 1].asI64 >= vm->stack[vm->stackSize - 2].asI64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_ILEQ:
@@ -494,8 +491,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize - 2].asI64 =
                     vm->stack[vm->stackSize - 1].asI64 <= vm->stack[vm->stackSize - 2].asI64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_FEQ:
@@ -503,15 +500,15 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize - 2].asI64 =
                     vm->stack[vm->stackSize - 1].asF64 == vm->stack[vm->stackSize - 2].asF64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_FNEQ:
             if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize - 1].asI64 = !vm->stack[vm->stackSize - 1].asF64;
-            ++vm->instructionPointer;
+            vm->instructionPointer++;
 
             break;
         case INST_FGT:
@@ -519,8 +516,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize - 2].asI64 =
                     vm->stack[vm->stackSize - 1].asF64 > vm->stack[vm->stackSize - 2].asF64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_FLT:
@@ -528,8 +525,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize - 2].asI64 =
                     vm->stack[vm->stackSize - 1].asF64 < vm->stack[vm->stackSize - 2].asF64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_FGEQ:
@@ -537,8 +534,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize - 2].asI64 =
                     vm->stack[vm->stackSize - 1].asF64 >= vm->stack[vm->stackSize - 2].asF64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_FLEQ:
@@ -546,8 +543,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             vm->stack[vm->stackSize - 2].asI64 =
                     vm->stack[vm->stackSize - 1].asF64 <= vm->stack[vm->stackSize - 2].asF64;
-            --vm->stackSize;
-            ++vm->instructionPointer;
+            vm->stackSize--;
+            vm->instructionPointer++;
 
             break;
         case INST_HALT:
@@ -566,11 +563,11 @@ static Exception vmExecuteProgram(QuarkVM *vm, int limit, int debug)
     {
         printf("[\033[1;34mINFO\033[0m]: Debugger started.\n");
         VM_EXECUTION_LIMIT < 0 ? printf("[\033[1;34mINFO\033[0m]: Total instructions: %s\n", "unlimited") : printf(
-                "[\033[1;34mINFO\033[0m]: Total instructions: %d\n", VM_EXECUTION_LIMIT);
+                "[\033[1;34mINFO\033[0m]: Total instructions: %d\n", (int) vm->programSize);
         printf("[\033[1;34mINFO\033[0m]: Type '?' for a list of commands.\n");
     }
 
-    for (int i = 1; limit != 0 && !vm->halt && i < (int) vm->programSize; ++i)
+    for (int i = 0; limit != 0 && !vm->halt && i < (int) vm->programSize; ++i)
     {
         Exception exception = vmExecuteInstruction(vm);
         if (exception != EX_OK)
@@ -616,14 +613,14 @@ static Exception vmExecuteProgram(QuarkVM *vm, int limit, int debug)
 
                 printf("\n>> ");
             }
+
+            if (i == (int) vm->programSize - 1)
+                printf("\n[\033[1;34mINFO\033[0m]: Debugger finished with %d executed instructions (excluding kaput).\n",
+                       i + 1);
         }
 
         if (limit > 0) --limit;
     }
-
-    if (debug)
-        printf("\n[\033[1;34mINFO\033[0m]: Debugger finished with %" PRId64 " executed instructions (excluding kaput).\n",
-               vm->instructionPointer);
 
     return EX_OK;
 }
@@ -634,7 +631,7 @@ static void vmPushNativeFunc(QuarkVM *vm, NativeVM nativeFunction)
     vm->nativeFunctions[vm->nativeFunctionsSize++] = nativeFunction;
 }
 
-static void vmLoadProgramFromMemory(QuarkVM *quarkVm, Instruction *program, int64_t programSize)
+static void vmLoadProgramFromMemory(QuarkVM *quarkVm, Instruction *program, int programSize)
 {
     assert(programSize < VM_CAPACITY && "Program size exceeds VM capacity.");
     memcpy(quarkVm->program, program, sizeof(program[0]) * programSize);
@@ -673,8 +670,8 @@ static void vmLoadProgramFromFile(QuarkVM *quarkVm, const char *filePath)
         exit(EXIT_FAILURE);
     }
 
-    quarkVm->programSize = (int64_t) fread(quarkVm->program, sizeof(quarkVm->program[0]),
-                                           fileSize / sizeof(quarkVm->program[0]), file);
+    quarkVm->programSize = (int) fread(quarkVm->program, sizeof(quarkVm->program[0]),
+                                       fileSize / sizeof(quarkVm->program[0]), file);
 
     if (ferror(file))
     {
@@ -704,25 +701,25 @@ static void vmSaveProgramToFile(const QuarkVM *vm, const char *filePath)
     fclose(file);
 }
 
-static int64_t vmTableFindAddress(const VMTable *table, StringView label)
+static int64_t vmTableFindAddress(const VMTable *table, StringView function)
 {
     for (int64_t i = 0; i < table->functionSize; ++i)
-        if (sv_equals(table->functions[i].label, label)) return table->functions[i].address;
+        if (sv_equals(table->functions[i].function, function)) return table->functions[i].address;
 
-    fprintf(stderr, "[\033[1;31mERROR\033[0m]: Function '%.*s' does not exist.\n", (int) label.count, label.data);
+    fprintf(stderr, "[\033[1;31mERROR\033[0m]: Function '%.*s' does not exist.\n", (int) function.count, function.data);
     exit(EXIT_FAILURE);
 }
 
-static void vmTablePushFunction(VMTable *table, StringView label, int64_t address)
+static void vmTablePushFunction(VMTable *table, StringView function, int64_t address)
 {
     assert(table->functionSize < VM_CAPACITY && "Number of functions exceeds VM capacity.");
-    table->functions[table->functionSize++] = (Function) {label, address};
+    table->functions[table->functionSize++] = (Function) {function, address};
 }
 
-static void vmTablePushDelayedOperand(VMTable *table, int64_t address, StringView label)
+static void vmTablePushDelayedOperand(VMTable *table, int64_t address, StringView function)
 {
     assert(table->delayedOperandSize < VM_CAPACITY && "Number of delayed operands exceeds VM capacity.");
-    table->delayedOperands[table->delayedOperandSize++] = (DelayedOperand) {label, address};
+    table->delayedOperands[table->delayedOperandSize++] = (DelayedOperand) {function, address};
 }
 
 static Word numberToWord(StringView source)
@@ -868,5 +865,5 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
 
     for (int64_t i = 0; i < vmTable->delayedOperandSize; ++i)
         vm->program[vmTable->delayedOperands[i].address].value.asI64 = vmTableFindAddress(vmTable,
-                                                                                          vmTable->delayedOperands[i].label);
+                                                                                          vmTable->delayedOperands[i].function);
 }

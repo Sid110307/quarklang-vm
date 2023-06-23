@@ -28,7 +28,6 @@ int main(int argc, char **argv)
         else if (strcmp(argv[i], "--file") == 0 || strcmp(argv[i], "-f") == 0)
         {
             const char *inputFilePath = argv[++i];
-
             if (inputFilePath == NULL)
             {
                 fprintf(stderr, "[\033[1;31mERROR\033[0m]: Missing input file\n");
@@ -40,11 +39,15 @@ int main(int argc, char **argv)
             vmLoadProgramFromFile(&vm, inputFilePath);
             for (int64_t j = 0; j < vm.programSize; ++j)
             {
-                !isRaw ? printf("Op \033[1;34m%" PRId64 "\033[0m: %s", j, getInstructionName(vm.program[j].type))
-                       : printf("%s", getInstructionName(vm.program[j].type));
-
-                if (instructionWithOperand(vm.program[j].type)) printf(" %" PRId64 "", vm.program[j].value.asI64);
-                printf("\n");
+                !isRaw ? instructionWithOperand(vm.program[j].type)
+                         ? printf("Op \033[1;34m%" PRId64 "\033[0m: %s (I64: %" PRId64 ", F64: %lf, PTR: %p)\n", j,
+                                  getInstructionName(vm.program[j].type), vm.program[j].value.asI64,
+                                  vm.program[j].value.asF64, vm.program[j].value.asPtr)
+                         : printf("Op \033[1;34m%" PRId64 "\033[0m: %s\n", j, getInstructionName(vm.program[j].type))
+                       : instructionWithOperand(vm.program[j].type)
+                         ? printf("%s (I64: %" PRId64 ", F64: %lf, PTR: %p)\n", getInstructionName(vm.program[j].type),
+                                  vm.program[j].value.asI64, vm.program[j].value.asF64, vm.program[j].value.asPtr)
+                         : printf("%s\n", getInstructionName(vm.program[j].type));
             }
         } else
         {

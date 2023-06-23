@@ -2,7 +2,7 @@
 #include "include/compiler.h"
 
 QuarkVM quarkVm = {0};
-int debug = 0, stepDebug = 0, limit = -1;
+int debug = 0, stepDebug = 0, limit = -1, dump = 0;
 
 int main(int argc, char **argv)
 {
@@ -21,6 +21,7 @@ int main(int argc, char **argv)
                 VM_EXECUTION_LIMIT = (int) strtol(argv[i], NULL, 10);
             } else if (strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0) debug = 1;
             else if (strcmp(argv[i], "--step") == 0 || strcmp(argv[i], "-s") == 0) stepDebug = 1;
+            else if (strcmp(argv[i], "--dump") == 0 || strcmp(argv[i], "-D") == 0) dump = 1;
             else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
             {
                 printf("[\033[1;34mINFO\033[0m]: Usage: %s [options] [--file | -f] <input_file.qce>\n\n", argv[0]);
@@ -31,6 +32,7 @@ int main(int argc, char **argv)
                        VM_EXECUTION_LIMIT);
                 printf("[\033[1;34mINFO\033[0m]:   --debug        | -d: Start an interactive debugger\n");
                 printf("[\033[1;34mINFO\033[0m]:   --step         | -s: Step through the program\n");
+                printf("[\033[1;34mINFO\033[0m]:   --dump         | -D: Dump the stack at the end of execution\n");
                 printf("[\033[1;34mINFO\033[0m]:   --help         | -h: Print this help message and exit\n");
 
                 exit(EXIT_SUCCESS);
@@ -52,9 +54,15 @@ int main(int argc, char **argv)
                 vmPushNativeFunc(&quarkVm, vmPrintI64); // 3
                 vmPushNativeFunc(&quarkVm, vmPrintPtr); // 4
 
-                if (!stepDebug) return vmExecuteProgram(&quarkVm, limit, debug) != EX_OK;
-                else
-                    for (int j = 1; limit != 0 && !quarkVm.halt && j < quarkVm.programSize; ++j)
+                int status = vmExecuteProgram(&quarkVm, limit, debug);
+                if (!stepDebug)
+                {
+                    if (dump) vmDumpStack(stdout, &quarkVm);
+                    if (status != EX_OK) return EXIT_FAILURE;
+
+                    return EXIT_SUCCESS;
+                } else
+                    for (int j = 0; limit != 0 && !quarkVm.halt && j < quarkVm.programSize; ++j)
                     {
                         printf("Instruction: %s (%" PRId64 " | %lf | %p)\n",
                                getInstructionName(quarkVm.program[j].type),
