@@ -15,8 +15,6 @@
 #define VM_CAPACITY 1024
 #define VM_STACK_CAPACITY (VM_CAPACITY * VM_CAPACITY)
 
-int VM_EXECUTION_LIMIT = 64;
-
 typedef enum
 {
     EX_OK = 0,
@@ -562,8 +560,7 @@ static Exception vmExecuteProgram(QuarkVM *vm, int limit, int debug)
     if (debug)
     {
         printf("[\033[1;34mINFO\033[0m]: Debugger started.\n");
-        VM_EXECUTION_LIMIT < 0 ? printf("[\033[1;34mINFO\033[0m]: Total instructions: %s\n", "unlimited") : printf(
-                "[\033[1;34mINFO\033[0m]: Total instructions: %d\n", (int) vm->programSize);
+        printf("[\033[1;34mINFO\033[0m]: Total instructions: %d\n", (int) vm->programSize);
         printf("[\033[1;34mINFO\033[0m]: Type '?' for a list of commands.\n");
     }
 
@@ -731,7 +728,6 @@ static void vmTablePushHoisted(VMTable *table, int64_t address, StringView funct
 static Word numberToWord(StringView source)
 {
     assert(source.count < VM_CAPACITY && "Number literal exceeds VM capacity.");
-
     char cString[VM_CAPACITY], *endPtr = NULL;
 
     memcpy(cString, source.data, source.count);

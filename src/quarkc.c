@@ -10,17 +10,7 @@ int main(int argc, char **argv)
     if (argc > 1)
         for (int i = 1; i < argc; ++i)
         {
-            if (strcmp(argv[i], "--limit") == 0 || strcmp(argv[i], "-l") == 0)
-            {
-                if (argv[++i] == NULL)
-                {
-                    printf("[\033[1;34mINFO\033[0m]: Current limit: %d\n", VM_EXECUTION_LIMIT);
-                    printf("[\033[1;34mINFO\033[0m]: Change the limit with --limit <number> or -l <number>.\n");
-                    exit(EXIT_FAILURE);
-                }
-
-                VM_EXECUTION_LIMIT = (int) strtol(argv[i], NULL, 10);
-            } else if (strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0) debug = 1;
+            if (strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0) debug = 1;
             else if (strcmp(argv[i], "--step") == 0 || strcmp(argv[i], "-s") == 0) stepDebug = 1;
             else if (strcmp(argv[i], "--dump") == 0 || strcmp(argv[i], "-D") == 0) dump = 1;
             else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
@@ -29,8 +19,6 @@ int main(int argc, char **argv)
                 printf("[\033[1;34mINFO\033[0m]: Required:\n");
                 printf("[\033[1;34mINFO\033[0m]:   --file <file>  | -f <file>: The file to compile\n");
                 printf("[\033[1;34mINFO\033[0m]: Optional:\n");
-                printf("[\033[1;34mINFO\033[0m]:   --limit <size> | -l <size>: The maximum number of instructions to run. (default: %d)\n",
-                       VM_EXECUTION_LIMIT);
                 printf("[\033[1;34mINFO\033[0m]:   --debug        | -d: Start an interactive debugger\n");
                 printf("[\033[1;34mINFO\033[0m]:   --step         | -s: Step through the program\n");
                 printf("[\033[1;34mINFO\033[0m]:   --dump         | -D: Dump the stack at the end of execution\n");
