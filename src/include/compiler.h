@@ -113,14 +113,14 @@ typedef struct
 {
     StringView function;
     int64_t address;
-} DelayedOperand;
+} Hoisted;
 
 typedef struct
 {
     Function functions[VM_CAPACITY];
-    DelayedOperand delayedOperands[VM_CAPACITY];
+    Hoisted hoistedFunctions[VM_CAPACITY];
     int64_t functionSize;
-    int64_t delayedOperandSize;
+    int64_t hoistedFunctionSize;
 } VMTable;
 
 static_assert(sizeof(Word) == 8, "The word size must be 64 bytes");
@@ -150,14 +150,14 @@ static const char *exceptionAsCString(Exception exception)
 
 static void vmDumpStack(FILE *stream, const QuarkVM *quarkVm)
 {
-    fprintf(stream, "Stack:");
+    fprintf(stream, "Stack (top to bottom):");
 
     if (quarkVm->stackSize > 0)
     {
         fprintf(stream, "\n");
-        for (int64_t i = 0; i < quarkVm->stackSize; ++i)
-            fprintf(stream, "  I64: %" PRId64 ", F64: %lf, PTR: %p\n", quarkVm->stack[i].asI64, quarkVm->stack[i].asF64,
-                    quarkVm->stack[i].asPtr);
+        for (int64_t i = quarkVm->stackSize - 1; i >= 0; --i)
+            fprintf(stream, "  %" PRId64 " | I64: %" PRId64 ", F64: %lf, PTR: %p\n", quarkVm->stackSize - i - 1,
+                    quarkVm->stack[i].asI64, quarkVm->stack[i].asF64, quarkVm->stack[i].asPtr);
     } else fprintf(stream, " [empty]\n");
 }
 
@@ -431,12 +431,12 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
         case INST_INVOKE:
             if (vm->stackSize >= VM_STACK_CAPACITY) return EX_STACK_OVERFLOW;
 
-            vm->stack[vm->stackSize].asI64 = (int64_t) vm->instructionPointer + 1;
+            vm->stack[vm->stackSize].asI64 = vm->instructionPointer + 1;
             vm->instructionPointer = instruction.value.asI64;
 
             break;
         case INST_NATIVE:
-            if (instruction.value.asI64 > (int64_t) vm->nativeFunctionsSize) return EX_ILLEGAL_OPERATION;
+            if (instruction.value.asI64 > vm->nativeFunctionsSize) return EX_ILLEGAL_OPERATION;
 
             const Exception exception = vm->nativeFunctions[instruction.value.asI64](vm);
             if (exception != EX_OK) return exception;
@@ -614,6 +614,12 @@ static Exception vmExecuteProgram(QuarkVM *vm, int limit, int debug)
                 printf("\n>> ");
             }
 
+            if (feof(stdin))
+            {
+                printf("\n[\033[1;34mINFO\033[0m]: Exiting debugger...\n");
+                return EXIT_SUCCESS;
+            }
+
             if (i == (int) vm->programSize - 1)
                 printf("\n[\033[1;34mINFO\033[0m]: Debugger finished with %d executed instructions (excluding kaput).\n",
                        i + 1);
@@ -716,10 +722,10 @@ static void vmTablePushFunction(VMTable *table, StringView function, int64_t add
     table->functions[table->functionSize++] = (Function) {function, address};
 }
 
-static void vmTablePushDelayedOperand(VMTable *table, int64_t address, StringView function)
+static void vmTablePushHoisted(VMTable *table, int64_t address, StringView function)
 {
-    assert(table->delayedOperandSize < VM_CAPACITY && "Number of delayed operands exceeds VM capacity.");
-    table->delayedOperands[table->delayedOperandSize++] = (DelayedOperand) {function, address};
+    assert(table->hoistedFunctionSize < VM_CAPACITY && "Number of hoisted functions exceeds VM capacity.");
+    table->hoistedFunctions[table->hoistedFunctionSize++] = (Hoisted) {function, address};
 }
 
 static Word numberToWord(StringView source)
@@ -734,12 +740,12 @@ static Word numberToWord(StringView source)
     Word result = {0};
     result.asI64 = strtoll(cString, &endPtr, 10);
 
-    if ((int64_t) (endPtr - cString) != source.count)
+    if ((endPtr - cString) != source.count)
     {
         result.asF64 = strtod(cString, &endPtr);
-        if ((int64_t) (endPtr - cString) != source.count)
+        if ((endPtr - cString) != source.count)
         {
-            fprintf(stderr, "[\033[1;31mERROR\033[0m]: Invalid number literal `%s`\n", cString);
+            fprintf(stderr, "[\033[1;31mERROR\033[0m]: Invalid number literal \"%s\"\n", cString);
             exit(EXIT_FAILURE);
         }
     }
@@ -807,7 +813,7 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
                         vm->program[vm->programSize++] = (Instruction) {INST_JUMP, .value.asI64 = sv_toInt(operand)};
                     else
                     {
-                        vmTablePushDelayedOperand(vmTable, vm->programSize, operand);
+                        vmTablePushHoisted(vmTable, vm->programSize, operand);
                         vm->program[vm->programSize++] = (Instruction) {INST_JUMP, {0}};
                     }
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_JUMP_IF))))
@@ -815,7 +821,7 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
                         vm->program[vm->programSize++] = (Instruction) {INST_JUMP_IF, .value.asI64 = sv_toInt(operand)};
                     else
                     {
-                        vmTablePushDelayedOperand(vmTable, vm->programSize, operand);
+                        vmTablePushHoisted(vmTable, vm->programSize, operand);
                         vm->program[vm->programSize++] = (Instruction) {INST_JUMP_IF, {0}};
                     }
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_RETURN))))
@@ -825,7 +831,7 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
                         vm->program[vm->programSize++] = (Instruction) {INST_INVOKE, .value.asI64 = sv_toInt(operand)};
                     else
                     {
-                        vmTablePushDelayedOperand(vmTable, vm->programSize, operand);
+                        vmTablePushHoisted(vmTable, vm->programSize, operand);
                         vm->program[vm->programSize++] = (Instruction) {INST_INVOKE, {0}};
                     }
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_NATIVE))))
@@ -842,6 +848,10 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
                     vm->program[vm->programSize++] = (Instruction) {INST_IGEQ, {0}};
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_ILEQ))))
                     vm->program[vm->programSize++] = (Instruction) {INST_ILEQ, {0}};
+                else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_FEQ))))
+                    vm->program[vm->programSize++] = (Instruction) {INST_FEQ, {0}};
+                else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_FNEQ))))
+                    vm->program[vm->programSize++] = (Instruction) {INST_FNEQ, {0}};
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_FGT))))
                     vm->program[vm->programSize++] = (Instruction) {INST_FGT, {0}};
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_FLT))))
@@ -855,7 +865,7 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
                 else
                 {
                     fprintf(stderr,
-                            "[\033[1;31mERROR\033[0m]: (In file `%s`): Invalid instruction `%.*s` on line %d.\n",
+                            "[\033[1;31mERROR\033[0m]: (In file \"%s\"): Invalid instruction \"%.*s\" on line %d.\n",
                             inputFilePath, (int) token.count, token.data, lineNumber);
                     exit(EXIT_FAILURE);
                 }
@@ -863,7 +873,7 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
         }
     }
 
-    for (int64_t i = 0; i < vmTable->delayedOperandSize; ++i)
-        vm->program[vmTable->delayedOperands[i].address].value.asI64 = vmTableFindAddress(vmTable,
-                                                                                          vmTable->delayedOperands[i].function);
+    for (int64_t i = 0; i < vmTable->hoistedFunctionSize; ++i)
+        vm->program[vmTable->hoistedFunctions[i].address].value.asI64 = vmTableFindAddress(vmTable,
+                                                                                           vmTable->hoistedFunctions[i].function);
 }

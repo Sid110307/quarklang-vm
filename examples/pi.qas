@@ -4,8 +4,8 @@
 -- QuarkLang Assembly program for calculating Pi (~3.14)
 
 put 4.0 -- Accumulator
-put 3.0 -- Denominator
-put 75000 -- Counter
+put 2.2124 -- Denominator
+put 1 -- Counter
 
 loop:
 	-- Calculate next denominator
@@ -31,7 +31,7 @@ loop:
 	fdiv
 	fplus
 
-	-- Decrement iteration count
+	-- Decrement counter
 	swap 2
 	put 1
 	iminus

@@ -33,7 +33,7 @@ int main(int argc, char **argv)
             vmParseSource(sv_readFile(inputFilePath), &quarkVm, &table, inputFilePath);
             vmSaveProgramToFile(&quarkVm, outputFilePath);
 
-            printf("[\033[1;34mINFO\033[0m]: Program compiled to `%s`.\n", outputFilePath);
+            printf("[\033[1;34mINFO\033[0m]: Program compiled to \"%s\".\n", outputFilePath);
             return EXIT_SUCCESS;
         } else
         {

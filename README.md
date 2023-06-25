@@ -137,8 +137,8 @@ Run them with `make examples -s`.
 | `fdiv`      | Divides the top two floats on the stack and pushes the result                                  | 0         |
 | `fmod`      | Calculates the modulus of the top two floats on the stack and pushes the result                | 0         |
 |             |                                                                                                |           |
-| `jump`      | Jumps to the specified function label                                                          | 1         |
-| `jif`       | Jumps to the specified function label if the top value on the stack is true                    | 1         |
+| `jmp`       | Jumps to the specified label                                                                   | 1         |
+| `jif`       | Jumps to the specified label if the top value on the stack is true                             | 1         |
 | `return`    | Returns from the current function                                                              | 0         |
 | `invoke`    | Calls a function                                                                               | 1         |
 | `native`    | Calls a [native](#native-functions) function                                                   | 1         |
@@ -157,7 +157,7 @@ Run them with `make examples -s`.
 | `fge`       | Checks if the top two floats on the stack are greater than or equal to and pushes the result   | 0         |
 | `fle`       | Checks if the top two floats on the stack are less than or equal to and pushes the result      | 0         |
 |             |                                                                                                |           |
-| `halt`      | Halts the program                                                                              | 0         |
+| `stop`      | Halts the program                                                                              | 0         |
 
 ### Native Functions
 

@@ -1,5 +1,6 @@
 #include "include/native.h"
 #include "include/compiler.h"
+#include <stdio.h>
 
 QuarkVM quarkVm = {0};
 int debug = 0, stepDebug = 0, limit = -1, dump = 0;
@@ -72,8 +73,8 @@ int main(int argc, char **argv)
 
                         if (vmExecuteInstruction(&quarkVm) != EX_OK) return EXIT_FAILURE;
                         vmDumpStack(stdout, &quarkVm);
-                        getchar();
 
+                        getchar();
                         if (limit > 0) --limit;
                     }
 
