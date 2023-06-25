@@ -171,15 +171,15 @@ Run them with `make examples -s`.
 
 ### Exceptions
 
-| Exception                     | Description                |
-|-------------------------------|----------------------------|
-| EX_OK                         | All good                   |                         
-| EX_STACK_OVERFLOW             | Stack overflow             |
-| EX_STACK_UNDERFLOW            | Stack underflow            |
-| EX_INVALID_INSTRUCTION        | Invalid instruction        |
-| EX_ILLEGAL_INSTRUCTION_ACCESS | Illegal instruction access |
-| EX_ILLEGAL_OPERATION          | Illegal operation          |
-| EX_DIVIDE_BY_ZERO             | Dividing by zero           |
+| Exception                       | Description                |
+|---------------------------------|----------------------------|
+| `EX_OK`                         | All good                   |                         
+| `EX_STACK_OVERFLOW`             | Stack overflow             |
+| `EX_STACK_UNDERFLOW`            | Stack underflow            |
+| `EX_INVALID_INSTRUCTION`        | Invalid instruction        |
+| `EX_ILLEGAL_INSTRUCTION_ACCESS` | Illegal instruction access |
+| `EX_ILLEGAL_OPERATION`          | Illegal operation          |
+| `EX_DIVIDE_BY_ZERO`             | Dividing by zero           |
 
 ## License
 
