@@ -21,9 +21,9 @@ ViM (Vi-Improved) Language Support for QuarkLang Assembly (QAS) files
 
 ```sh
 $ make ext-install -s
-# .----------------------------------.
+# +----------------------------------+
 # | QuarkLang VM Extension Installer |
-# '----------------------------------'
+# +----------------------------------+
 ```
 
 ## Known Issues

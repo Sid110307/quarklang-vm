@@ -59,8 +59,7 @@ static int sv_equals(StringView a, StringView b)
 static int sv_toInt(StringView sv)
 {
     int result = 0;
-    for (int64_t i = 0; i < sv.count && isdigit(sv.data[i]); ++i)
-        result = result * 10 + sv.data[i] - '0';
+    for (int64_t i = 0; i < sv.count && isdigit(sv.data[i]); ++i) result = result * 10 + sv.data[i] - '0';
 
     return result;
 }
@@ -70,20 +69,21 @@ static StringView sv_readFile(const char *filePath)
     FILE *file = fopen(filePath, "r");
     if (file == NULL)
     {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not open file '%s' (%s)\n", filePath, strerror(errno));
+        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not open file \"%s\" (%s)\n", filePath, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     if (fseek(file, 0, SEEK_END) < 0)
     {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not set EOF for file '%s' (%s)\n", filePath, strerror(errno));
+        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not set EOF for file \"%s\" (%s)\n", filePath,
+                strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     long fileSize = ftell(file);
     if (fileSize < 0)
     {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not determine length of file '%s' (%s)\n", filePath,
+        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not determine length of file \"%s\" (%s)\n", filePath,
                 strerror(errno));
         exit(EXIT_FAILURE);
     }
@@ -91,21 +91,21 @@ static StringView sv_readFile(const char *filePath)
     char *fileContents = malloc(fileSize);
     if (fileContents == NULL)
     {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not allocate memory for file '%s' (%s)\n", filePath,
+        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not allocate memory for file \"%s\" (%s)\n", filePath,
                 strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     if (fseek(file, 0, SEEK_SET) < 0)
     {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file '%s' (%s)\n", filePath, strerror(errno));
+        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not read file \"%s\" (%s)\n", filePath, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
-    int64_t readBytes = fread(fileContents, 1, fileSize, file);
+    int64_t readBytes = (int64_t) fread(fileContents, 1, fileSize, file);
     if (ferror(file))
     {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not get contents for file '%s' (%s)\n", filePath,
+        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not get contents for file \"%s\" (%s)\n", filePath,
                 strerror(errno));
         exit(EXIT_FAILURE);
     }

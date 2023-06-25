@@ -57,7 +57,7 @@ install:
 
 	./utils.sh bash
 	@echo "\033[1;32mDone.\033[0m"
-	@echo "\033[1;36mReload your terminal or run 'source ~/.bashrc' to use the new binaries.\033[0m"
+	@echo "\033[1;36mReload your terminal or run \"source ~/.bashrc\" to use the new binaries.\033[0m"
 
 install-user:
 	@echo -n "\033[1;36mInstalling binaries for user $(USER)... \033[0m"
@@ -69,7 +69,7 @@ install-user:
 
 	./utils.sh bash
 	@echo "\033[1;32mDone.\033[0m"
-	@echo "\033[1;36mReload your terminal or run 'source ~/.bashrc' to use the new binaries.\033[0m"
+	@echo "\033[1;36mReload your terminal or run \"source ~/.bashrc\" to use the new binaries.\033[0m"
 
 ext-install:
 	./utils.sh extensions

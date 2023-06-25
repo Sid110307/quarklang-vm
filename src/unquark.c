@@ -51,7 +51,7 @@ int main(int argc, char **argv)
             }
         } else
         {
-            fprintf(stderr, "[\033[1;31mERROR\033[0m]: Unknown option '%s'\n", argv[i]);
+            fprintf(stderr, "[\033[1;31mERROR\033[0m]: Unknown option \"%s\"\n", argv[i]);
             printf("[\033[1;34mINFO\033[0m]: Usage: %s [options] [--file | -f] <input_file.qce>\n\n", argv[0]);
             printf("[\033[1;34mINFO\033[0m]: Type --help or -h for more information\n");
 

@@ -32,12 +32,12 @@ loop:
 	fge
 	jif loop
 
-	-- Clean up
-	swap 1
-	release
-	swap 1
-	release
+-- Clean up
+swap 1
+release
+swap 1
+release
 
-    -- Print the result
-	native 2
-	stop
+-- Print the result
+native 2
+stop
