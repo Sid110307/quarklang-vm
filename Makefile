@@ -1,5 +1,5 @@
 CFLAGS=-std=c11 -pedantic
-CWARNINGS=-Wall -Wextra -Wno-unused-value -Wno-unused-function
+CWARNINGS=-Wall -Wextra -Wno-unused-function
 LIBS=-lm
 
 EXAMPLES=$(patsubst %.qas,%.qce,$(wildcard ./examples/*.qas))

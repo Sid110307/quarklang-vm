@@ -43,15 +43,8 @@ int main(int argc, char **argv)
                 vmPushNativeFunc(&quarkVm, vmPrintI64); // 3
                 vmPushNativeFunc(&quarkVm, vmPrintPtr); // 4
 
-                int status = vmExecuteProgram(&quarkVm, limit, debug);
-                if (!stepDebug)
-                {
-                    if (dump) vmDumpStack(stdout, &quarkVm);
-                    if (status != EX_OK) return EXIT_FAILURE;
-
-                    return EXIT_SUCCESS;
-                } else
-                    for (int j = 0; limit != 0 && !quarkVm.halt && j < quarkVm.programSize; ++j)
+                if (stepDebug == 1)
+                    for (int j = 0; limit != 0 && !quarkVm.halt && j < (int) quarkVm.programSize; ++j)
                     {
                         printf("Instruction: %s (%" PRId64 " | %lf | %p)\n",
                                getInstructionName(quarkVm.program[j].type),
@@ -65,6 +58,13 @@ int main(int argc, char **argv)
                         getchar();
                         if (limit > 0) --limit;
                     }
+                else
+                {
+                    if (dump) vmDumpStack(stdout, &quarkVm);
+                    if (vmExecuteProgram(&quarkVm, limit, debug) != EX_OK) return EXIT_FAILURE;
+
+                    return EXIT_SUCCESS;
+                }
 
                 return EXIT_SUCCESS;
             } else

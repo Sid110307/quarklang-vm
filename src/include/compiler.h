@@ -153,9 +153,9 @@ static void vmDumpStack(FILE *stream, const QuarkVM *quarkVm)
     if (quarkVm->stackSize > 0)
     {
         fprintf(stream, "\n");
-        for (int64_t i = quarkVm->stackSize - 1; i >= 0; --i)
-            fprintf(stream, "  %" PRId64 " | I64: %" PRId64 ", F64: %lf, PTR: %p\n", quarkVm->stackSize - i - 1,
-                    quarkVm->stack[i].asI64, quarkVm->stack[i].asF64, quarkVm->stack[i].asPtr);
+        for (int64_t i = 0; i < quarkVm->stackSize; ++i)
+            fprintf(stream, "  %" PRId64 " | I64: %" PRId64 ", F64: %lf, PTR: %p\n", i, quarkVm->stack[i].asI64,
+                    quarkVm->stack[i].asF64, quarkVm->stack[i].asPtr);
     } else fprintf(stream, " [empty]\n");
 }
 
@@ -236,7 +236,7 @@ static const char *getInstructionName(InstructionType type)
         case INST_HALT:
             return "stop";
         default:
-            assert(0 && "[instructionName]: Unreachable");
+            assert(0 && "[getInstructionName]: Unreachable");
     }
 }
 
@@ -306,7 +306,7 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
             if (vm->stackSize - instruction.value.asI64 <= 0) return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize] = vm->stack[vm->stackSize - instruction.value.asI64 - 1];
-            ++vm->stackSize;
+            vm->stackSize++;
             ++vm->instructionPointer;
 
             break;
@@ -414,8 +414,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
         case INST_JUMP_IF:
             if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
 
-            vm->stack[vm->stackSize - 1].asI64 ? vm->instructionPointer = instruction.value.asI64
-                                               : ++vm->instructionPointer;
+            vm->stack[vm->stackSize - 1].asI64 != 0 ? vm->instructionPointer = instruction.value.asI64
+                                                    : vm->instructionPointer++;
             vm->stackSize--;
 
             break;
@@ -579,7 +579,7 @@ static Exception vmExecuteProgram(QuarkVM *vm, int limit, int debug)
             printf("Op %d:\n", i);
             printf("  Type: %s\n", getInstructionName(vm->program[i].type));
 
-            if (instructionWithOperand(vm->program[vm->instructionPointer].type))
+            if (instructionWithOperand(vm->program[i].type))
                 printf("  I64: %" PRId64 ", F64: %lf, PTR: %p\n", vm->program[i].value.asI64,
                        vm->program[i].value.asF64, vm->program[i].value.asPtr);
 
