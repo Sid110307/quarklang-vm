@@ -24,9 +24,8 @@ loop:
     iminus
     dup 0
     put 0
-    ieq
 
-    -- Loop if not equal
+    -- Loop while counter is not 0
     ineq
     jif loop
     stop

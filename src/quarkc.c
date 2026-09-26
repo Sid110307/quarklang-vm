@@ -44,13 +44,16 @@ int main(int argc, char **argv)
                 vmPushNativeFunc(&quarkVm, vmPrintPtr); // 4
 
                 if (stepDebug == 1)
-                    for (int j = 0; limit != 0 && !quarkVm.halt && j < (int) quarkVm.programSize; ++j)
+                    for (int j = 0; limit != 0 && !quarkVm.halt; ++j)
                     {
+                        int currentOp = quarkVm.instructionPointer;
+                        if (currentOp >= (int) quarkVm.programSize) break;
+
                         printf("Instruction: %s (%" PRId64 " | %lf | %p)\n",
-                               getInstructionName(quarkVm.program[j].type),
-                               quarkVm.program[j].value.asI64,
-                               quarkVm.program[j].value.asF64,
-                               quarkVm.program[j].value.asPtr);
+                               getInstructionName(quarkVm.program[currentOp].type),
+                               quarkVm.program[currentOp].value.asI64,
+                               quarkVm.program[currentOp].value.asF64,
+                               quarkVm.program[currentOp].value.asPtr);
 
                         if (vmExecuteInstruction(&quarkVm) != EX_OK) return EXIT_FAILURE;
                         vmDumpStack(stdout, &quarkVm);

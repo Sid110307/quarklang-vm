@@ -451,9 +451,11 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             break;
         case INST_INEQ:
-            if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
+            if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-            vm->stack[vm->stackSize - 1].asI64 = !vm->stack[vm->stackSize - 1].asI64;
+            vm->stack[vm->stackSize - 2].asI64 =
+                    vm->stack[vm->stackSize - 1].asI64 != vm->stack[vm->stackSize - 2].asI64;
+            vm->stackSize--;
             ++vm->instructionPointer;
 
             break;
@@ -503,9 +505,11 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             break;
         case INST_FNEQ:
-            if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
+            if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
 
-            vm->stack[vm->stackSize - 1].asI64 = !vm->stack[vm->stackSize - 1].asF64;
+            vm->stack[vm->stackSize - 2].asI64 =
+                    vm->stack[vm->stackSize - 1].asF64 != vm->stack[vm->stackSize - 2].asF64;
+            vm->stackSize--;
             ++vm->instructionPointer;
 
             break;
@@ -564,24 +568,31 @@ static Exception vmExecuteProgram(QuarkVM *vm, int limit, int debug)
         printf("[\033[1;34mINFO\033[0m]: Type '?' for a list of commands.\n");
     }
 
-    for (int i = 0; limit != 0 && !vm->halt && i < (int) vm->programSize; ++i)
+    int i;
+    for (i = 0; limit != 0 && !vm->halt; ++i)
     {
+        int currentOp = vm->instructionPointer;
         Exception exception = vmExecuteInstruction(vm);
         if (exception != EX_OK)
         {
-            fprintf(stderr, "[\033[1;31mERROR\033[0m]: Error at Op %d (%s): %s\n", i,
-                    getInstructionName(vm->program[i].type), exceptionAsCString(exception));
+            if (currentOp < (int) vm->programSize)
+                fprintf(stderr, "[\033[1;31mERROR\033[0m]: Error at Op %d (%s): %s\n", currentOp,
+                        getInstructionName(vm->program[currentOp].type), exceptionAsCString(exception));
+            else
+                fprintf(stderr, "[\033[1;31mERROR\033[0m]: Error at Op %d: %s\n", currentOp,
+                        exceptionAsCString(exception));
+
             return exception;
         }
 
         if (debug)
         {
-            printf("Op %d:\n", i);
-            printf("  Type: %s\n", getInstructionName(vm->program[i].type));
+            printf("Op %d:\n", currentOp);
+            printf("  Type: %s\n", getInstructionName(vm->program[currentOp].type));
 
-            if (instructionWithOperand(vm->program[i].type))
-                printf("  I64: %" PRId64 ", F64: %lf, PTR: %p\n", vm->program[i].value.asI64,
-                       vm->program[i].value.asF64, vm->program[i].value.asPtr);
+            if (instructionWithOperand(vm->program[currentOp].type))
+                printf("  I64: %" PRId64 ", F64: %lf, PTR: %p\n", vm->program[currentOp].value.asI64,
+                       vm->program[currentOp].value.asF64, vm->program[currentOp].value.asPtr);
 
             printf("\n>> ");
             char input[256];
@@ -616,14 +627,13 @@ static Exception vmExecuteProgram(QuarkVM *vm, int limit, int debug)
                 printf("\n[\033[1;34mINFO\033[0m]: Exiting debugger...\n");
                 return EXIT_SUCCESS;
             }
-
-            if (i == (int) vm->programSize - 1)
-                printf("\n[\033[1;34mINFO\033[0m]: Debugger finished with %d executed instructions (excluding kaput).\n",
-                       i + 1);
         }
 
         if (limit > 0) --limit;
     }
+
+    if (debug && vm->halt)
+        printf("\n[\033[1;34mINFO\033[0m]: Debugger finished with %d executed instructions (excluding kaput).\n", i);
 
     return EX_OK;
 }
