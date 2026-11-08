@@ -9,6 +9,8 @@
 #include <ctype.h>
 #include <math.h>
 #include <inttypes.h>
+#include <limits.h>
+#include <float.h>
 
 #include "stringview.h"
 
@@ -91,8 +93,9 @@ struct QuarkVM
     Word stack[VM_STACK_CAPACITY];
     int64_t stackSize;
 
-    Instruction program[VM_CAPACITY];
-    int programSize;
+    Instruction *program;
+    int64_t programSize;
+    size_t programCapacity;
     int64_t instructionPointer;
 
     NativeVM nativeFunctions[VM_CAPACITY];
@@ -115,13 +118,42 @@ typedef struct
 
 typedef struct
 {
-    Function functions[VM_CAPACITY];
-    Hoisted hoistedFunctions[VM_CAPACITY];
+    Function *functions;
+    Hoisted *hoistedFunctions;
+    size_t functionCapacity;
+    size_t hoistedFunctionCapacity;
     int64_t functionSize;
     int64_t hoistedFunctionSize;
 } VMTable;
 
-static_assert(sizeof(Word) == 8, "The word size must be 64 bytes");
+static_assert(CHAR_BIT == 8 && sizeof(Word) == 8, "The word size must be 64 bits");
+static_assert(sizeof(double) == 8 && DBL_MANT_DIG == 53 && DBL_MAX_EXP == 1024,
+              "Bytecode requires IEEE 754 binary64 doubles");
+
+static void *vmGrowArray(void *data, size_t *capacity, size_t required, size_t elementSize)
+{
+    if (required <= *capacity) return data;
+
+    size_t maximum = SIZE_MAX / elementSize;
+    if ((uint64_t) maximum > INT64_MAX) maximum = (size_t) INT64_MAX;
+    if (required > maximum)
+    {
+        fprintf(stderr, "Program storage is too large\n");
+        exit(EXIT_FAILURE);
+    }
+
+    size_t next = *capacity ? *capacity : 16;
+    while (next < required) next = next > maximum / 2 ? maximum : next * 2;
+    void *result = realloc(data, next * elementSize);
+    if (result == NULL)
+    {
+        fprintf(stderr, "Could not allocate program storage\n");
+        exit(EXIT_FAILURE);
+    }
+
+    *capacity = next;
+    return result;
+}
 
 static const char *exceptionAsCString(Exception exception)
 {
@@ -143,6 +175,7 @@ static const char *exceptionAsCString(Exception exception)
             return "Illegal operation";
         default:
             assert(0 && "[exceptionAsCString]: Unreachable");
+            return "Unknown exception";
     }
 }
 
@@ -237,6 +270,7 @@ static const char *getInstructionName(InstructionType type)
             return "stop";
         default:
             assert(0 && "[getInstructionName]: Unreachable");
+            return "invalid";
     }
 }
 
@@ -281,12 +315,14 @@ static int instructionWithOperand(InstructionType type)
             return 1;
         default:
             assert(0 && "[instructionWithOperand]: Unreachable");
+            return 0;
     }
 }
 
 static Exception vmExecuteInstruction(QuarkVM *vm)
 {
-    if (vm->instructionPointer >= vm->programSize) return EX_ILLEGAL_INSTRUCTION_ACCESS;
+    if (vm->instructionPointer < 0 || vm->instructionPointer >= vm->programSize)
+        return EX_ILLEGAL_INSTRUCTION_ACCESS;
 
     Instruction instruction = vm->program[vm->instructionPointer];
     switch (instruction.type)
@@ -303,7 +339,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
             break;
         case INST_DUP:
             if (vm->stackSize >= VM_STACK_CAPACITY) return EX_STACK_OVERFLOW;
-            if (vm->stackSize - instruction.value.asI64 <= 0) return EX_STACK_UNDERFLOW;
+            if (instruction.value.asI64 < 0 || instruction.value.asI64 >= vm->stackSize)
+                return EX_STACK_UNDERFLOW;
 
             vm->stack[vm->stackSize] = vm->stack[vm->stackSize - instruction.value.asI64 - 1];
             vm->stackSize++;
@@ -311,7 +348,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             break;
         case INST_SWAP:
-            if (instruction.value.asI64 >= (int64_t) vm->stackSize) return EX_STACK_UNDERFLOW;
+            if (instruction.value.asI64 < 0 || instruction.value.asI64 >= vm->stackSize)
+                return EX_STACK_UNDERFLOW;
 
             Word temp = vm->stack[vm->stackSize - 1];
             vm->stack[vm->stackSize - 1] = vm->stack[vm->stackSize - instruction.value.asI64 - 1];
@@ -353,6 +391,8 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
         case INST_IDIV:
             if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
             if (vm->stack[vm->stackSize - 1].asI64 == 0) return EX_DIVIDE_BY_ZERO;
+            if (vm->stack[vm->stackSize - 2].asI64 == INT64_MIN &&
+                vm->stack[vm->stackSize - 1].asI64 == -1) return EX_ILLEGAL_OPERATION;
 
             vm->stack[vm->stackSize - 2].asI64 /= vm->stack[vm->stackSize - 1].asI64;
             vm->stackSize--;
@@ -361,6 +401,9 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
             break;
         case INST_IMOD:
             if (vm->stackSize < 2) return EX_STACK_UNDERFLOW;
+            if (vm->stack[vm->stackSize - 1].asI64 == 0) return EX_DIVIDE_BY_ZERO;
+            if (vm->stack[vm->stackSize - 2].asI64 == INT64_MIN &&
+                vm->stack[vm->stackSize - 1].asI64 == -1) return EX_ILLEGAL_OPERATION;
 
             vm->stack[vm->stackSize - 2].asI64 %= vm->stack[vm->stackSize - 1].asI64;
             vm->stackSize--;
@@ -409,10 +452,15 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
 
             break;
         case INST_JUMP:
+            if (instruction.value.asI64 < 0 || instruction.value.asI64 >= vm->programSize)
+                return EX_ILLEGAL_INSTRUCTION_ACCESS;
             vm->instructionPointer = instruction.value.asI64;
             break;
         case INST_JUMP_IF:
             if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
+            if (vm->stack[vm->stackSize - 1].asI64 != 0 &&
+                (instruction.value.asI64 < 0 || instruction.value.asI64 >= vm->programSize))
+                return EX_ILLEGAL_INSTRUCTION_ACCESS;
 
             vm->stack[vm->stackSize - 1].asI64 != 0 ? vm->instructionPointer = instruction.value.asI64
                                                     : vm->instructionPointer++;
@@ -421,6 +469,9 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
             break;
         case INST_RETURN:
             if (vm->stackSize < 1) return EX_STACK_UNDERFLOW;
+            if (vm->stack[vm->stackSize - 1].asI64 < 0 ||
+                vm->stack[vm->stackSize - 1].asI64 >= vm->programSize)
+                return EX_ILLEGAL_INSTRUCTION_ACCESS;
 
             vm->instructionPointer = vm->stack[vm->stackSize - 1].asI64;
             vm->stackSize--;
@@ -428,13 +479,16 @@ static Exception vmExecuteInstruction(QuarkVM *vm)
             break;
         case INST_INVOKE:
             if (vm->stackSize >= VM_STACK_CAPACITY) return EX_STACK_OVERFLOW;
+            if (instruction.value.asI64 < 0 || instruction.value.asI64 >= vm->programSize)
+                return EX_ILLEGAL_INSTRUCTION_ACCESS;
 
-            vm->stack[vm->stackSize].asI64 = vm->instructionPointer + 1;
+            vm->stack[vm->stackSize++].asI64 = vm->instructionPointer + 1;
             vm->instructionPointer = instruction.value.asI64;
 
             break;
         case INST_NATIVE:
-            if (instruction.value.asI64 > vm->nativeFunctionsSize) return EX_ILLEGAL_OPERATION;
+            if (instruction.value.asI64 < 0 || instruction.value.asI64 >= vm->nativeFunctionsSize ||
+                vm->nativeFunctions[instruction.value.asI64] == NULL) return EX_ILLEGAL_OPERATION;
 
             const Exception exception = vm->nativeFunctions[instruction.value.asI64](vm);
             if (exception != EX_OK) return exception;
@@ -564,22 +618,23 @@ static Exception vmExecuteProgram(QuarkVM *vm, int limit, int debug)
     if (debug)
     {
         printf("[\033[1;34mINFO\033[0m]: Debugger started.\n");
-        printf("[\033[1;34mINFO\033[0m]: Total instructions: %d\n", (int) vm->programSize);
+        printf("[\033[1;34mINFO\033[0m]: Total instructions: %" PRId64 "\n", vm->programSize);
         printf("[\033[1;34mINFO\033[0m]: Type '?' for a list of commands.\n");
     }
 
-    int i;
+    uint64_t i;
     for (i = 0; limit != 0 && !vm->halt; ++i)
     {
-        int currentOp = vm->instructionPointer;
+        int64_t currentOp = vm->instructionPointer;
         Exception exception = vmExecuteInstruction(vm);
         if (exception != EX_OK)
         {
-            if (currentOp < (int) vm->programSize)
-                fprintf(stderr, "[\033[1;31mERROR\033[0m]: Error at Op %d (%s): %s\n", currentOp,
+            if (currentOp >= 0 && currentOp < vm->programSize &&
+                vm->program[currentOp].type >= INST_KAPUT && vm->program[currentOp].type <= INST_HALT)
+                fprintf(stderr, "[\033[1;31mERROR\033[0m]: Error at Op %" PRId64 " (%s): %s\n", currentOp,
                         getInstructionName(vm->program[currentOp].type), exceptionAsCString(exception));
             else
-                fprintf(stderr, "[\033[1;31mERROR\033[0m]: Error at Op %d: %s\n", currentOp,
+                fprintf(stderr, "[\033[1;31mERROR\033[0m]: Error at Op %" PRId64 ": %s\n", currentOp,
                         exceptionAsCString(exception));
 
             return exception;
@@ -587,7 +642,7 @@ static Exception vmExecuteProgram(QuarkVM *vm, int limit, int debug)
 
         if (debug)
         {
-            printf("Op %d:\n", currentOp);
+            printf("Op %" PRId64 ":\n", currentOp);
             printf("  Type: %s\n", getInstructionName(vm->program[currentOp].type));
 
             if (instructionWithOperand(vm->program[currentOp].type))
@@ -633,7 +688,7 @@ static Exception vmExecuteProgram(QuarkVM *vm, int limit, int debug)
     }
 
     if (debug && vm->halt)
-        printf("\n[\033[1;34mINFO\033[0m]: Debugger finished with %d executed instructions (excluding kaput).\n", i);
+        printf("\n[\033[1;34mINFO\033[0m]: Debugger finished with %" PRIu64 " executed instructions (excluding kaput).\n", i);
 
     return EX_OK;
 }
@@ -644,74 +699,132 @@ static void vmPushNativeFunc(QuarkVM *vm, NativeVM nativeFunction)
     vm->nativeFunctions[vm->nativeFunctionsSize++] = nativeFunction;
 }
 
-static void vmLoadProgramFromMemory(QuarkVM *quarkVm, Instruction *program, int programSize)
+static int vmValidInstruction(Instruction instruction, int64_t programSize)
 {
-    assert(programSize < VM_CAPACITY && "Program size exceeds VM capacity.");
-    memcpy(quarkVm->program, program, sizeof(program[0]) * programSize);
+    if (instruction.type < INST_KAPUT || instruction.type > INST_HALT) return 0;
 
-    quarkVm->programSize = programSize;
+    switch (instruction.type)
+    {
+        case INST_JUMP:
+        case INST_JUMP_IF:
+        case INST_INVOKE:
+            return instruction.value.asI64 >= 0 && instruction.value.asI64 < programSize;
+        case INST_DUP:
+        case INST_SWAP:
+            return instruction.value.asI64 >= 0 && instruction.value.asI64 < VM_STACK_CAPACITY;
+        case INST_NATIVE:
+            return instruction.value.asI64 >= 0 && instruction.value.asI64 < VM_CAPACITY;
+        default:
+            return instructionWithOperand(instruction.type) || instruction.value.asI64 == 0;
+    }
 }
 
-static void vmLoadProgramFromFile(QuarkVM *quarkVm, const char *filePath)
+static void vmLoadProgramFromMemory(QuarkVM *vm, const Instruction *program, int64_t programSize)
+{
+    if (programSize <= 0 || (uint64_t) programSize > SIZE_MAX / sizeof(*program) || program == NULL ||
+        (program == vm->program && (uint64_t) programSize > vm->programCapacity))
+    {
+        fprintf(stderr, "Invalid program size\n");
+        exit(EXIT_FAILURE);
+    }
+    for (int64_t i = 0; i < programSize; ++i)
+        if (!vmValidInstruction(program[i], programSize))
+        {
+            fprintf(stderr, "Invalid instruction at Op %" PRId64 "\n", i);
+            exit(EXIT_FAILURE);
+        }
+
+    if (program != vm->program)
+    {
+        vm->program = vmGrowArray(vm->program, &vm->programCapacity, (size_t) programSize,
+                                 sizeof(*vm->program));
+        memmove(vm->program, program, sizeof(*program) * (size_t) programSize);
+    }
+    vm->programSize = programSize;
+    vm->instructionPointer = 0;
+    vm->stackSize = 0;
+    vm->halt = 0;
+}
+
+static void vmBytecodeError(FILE *file, const char *filePath)
+{
+    if (file != NULL) fclose(file);
+    fprintf(stderr, "Invalid or unreadable bytecode file \"%s\"\n", filePath);
+    exit(EXIT_FAILURE);
+}
+
+static uint64_t vmDecodeU64(const unsigned char *bytes)
+{
+    uint64_t value = 0;
+    for (unsigned int i = 0; i < 8; ++i) value |= (uint64_t) bytes[i] << (i * 8);
+    return value;
+}
+
+static void vmEncodeU64(unsigned char *bytes, uint64_t value)
+{
+    for (unsigned int i = 0; i < 8; ++i) bytes[i] = (unsigned char) (value >> (i * 8));
+}
+
+static void vmLoadProgramFromFile(QuarkVM *vm, const char *filePath)
 {
     FILE *file = fopen(filePath, "rb");
-    if (file == NULL)
-    {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Failed to open file \"%s\" (%s)\n", filePath, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
+    if (file == NULL) vmBytecodeError(file, filePath);
 
-    if (fseek(file, 0, SEEK_END) < 0)
-    {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Failed to read file \"%s\" (%s)\n", filePath, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
+    unsigned char header[16];
+    if (fread(header, 1, sizeof(header), file) != sizeof(header) ||
+        memcmp(header, "QCE\0\1\0\0\0", 8) != 0) vmBytecodeError(file, filePath);
 
+    uint64_t count = vmDecodeU64(header + 8);
+    if (count == 0 || count > INT64_MAX || count > SIZE_MAX / sizeof(*vm->program) ||
+        count > (UINT64_MAX - sizeof(header)) / 9) vmBytecodeError(file, filePath);
+
+    if (fseek(file, 0, SEEK_END) != 0) vmBytecodeError(file, filePath);
     long fileSize = ftell(file);
-    if (fileSize < 0)
+    if (fileSize < 0 || (uint64_t) fileSize != sizeof(header) + count * 9 ||
+        fseek(file, (long) sizeof(header), SEEK_SET) != 0) vmBytecodeError(file, filePath);
+
+    vm->program = vmGrowArray(vm->program, &vm->programCapacity, (size_t) count, sizeof(*vm->program));
+    for (int64_t i = 0; i < (int64_t) count; ++i)
     {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Failed to read file \"%s\" (%s)\n", filePath, strerror(errno));
-        exit(EXIT_FAILURE);
+        unsigned char record[9];
+        if (fread(record, 1, sizeof(record), file) != sizeof(record)) vmBytecodeError(file, filePath);
+        uint64_t bits = vmDecodeU64(record + 1);
+        Instruction instruction = {.type = (InstructionType) record[0]};
+        memcpy(&instruction.value, &bits, sizeof(bits));
+        if (!vmValidInstruction(instruction, (int64_t) count)) vmBytecodeError(file, filePath);
+        vm->program[i] = instruction;
     }
+    if (fgetc(file) != EOF || ferror(file)) vmBytecodeError(file, filePath);
+    if (fclose(file) != 0) vmBytecodeError(NULL, filePath);
 
-    assert(fileSize % sizeof(quarkVm->program[0]) == 0 && "Invalid bytecode");
-    assert((size_t) fileSize <= VM_CAPACITY * sizeof(quarkVm->program[0]) && "Bytecode too large");
-
-    if (fseek(file, 0, SEEK_SET) < 0)
-    {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Failed to read file \"%s\" (%s)\n", filePath, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    quarkVm->programSize = (int) fread(quarkVm->program, sizeof(quarkVm->program[0]),
-                                       fileSize / sizeof(quarkVm->program[0]), file);
-
-    if (ferror(file))
-    {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Failed to read file \"%s\" (%s)\n", filePath, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    fclose(file);
+    vm->programSize = (int64_t) count;
+    vm->instructionPointer = 0;
+    vm->stackSize = 0;
+    vm->halt = 0;
 }
 
 static void vmSaveProgramToFile(const QuarkVM *vm, const char *filePath)
 {
+    if (vm->programSize <= 0 || vm->program == NULL) vmBytecodeError(NULL, filePath);
+    for (int64_t i = 0; i < vm->programSize; ++i)
+        if (!vmValidInstruction(vm->program[i], vm->programSize)) vmBytecodeError(NULL, filePath);
+
     FILE *file = fopen(filePath, "wb");
-    if (file == NULL)
-    {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Failed to open file \"%s\" (%s).\n", filePath, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
+    if (file == NULL) vmBytecodeError(file, filePath);
 
-    fwrite(vm->program, sizeof(vm->program[0]), vm->programSize, file);
-    if (ferror(file))
-    {
-        fprintf(stderr, "[\033[1;31mERROR\033[0m]: Failed to write to file \"%s\" (%s).\n", filePath, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
+    unsigned char header[16] = {'Q', 'C', 'E', 0, 1, 0, 0, 0};
+    vmEncodeU64(header + 8, (uint64_t) vm->programSize);
+    if (fwrite(header, 1, sizeof(header), file) != sizeof(header)) vmBytecodeError(file, filePath);
 
-    fclose(file);
+    for (int64_t i = 0; i < vm->programSize; ++i)
+    {
+        unsigned char record[9] = {(unsigned char) vm->program[i].type};
+        uint64_t bits;
+        memcpy(&bits, &vm->program[i].value, sizeof(bits));
+        vmEncodeU64(record + 1, bits);
+        if (fwrite(record, 1, sizeof(record), file) != sizeof(record)) vmBytecodeError(file, filePath);
+    }
+    if (fclose(file) != 0) vmBytecodeError(NULL, filePath);
 }
 
 static int64_t vmTableFindAddress(const VMTable *table, StringView function)
@@ -726,29 +839,37 @@ static int64_t vmTableFindAddress(const VMTable *table, StringView function)
 
 static void vmTablePushFunction(VMTable *table, StringView function, int64_t address)
 {
-    assert(table->functionSize < VM_CAPACITY && "Number of functions exceeds VM capacity.");
+    table->functions = vmGrowArray(table->functions, &table->functionCapacity,
+                                  (size_t) table->functionSize + 1, sizeof(*table->functions));
     table->functions[table->functionSize++] = (Function) {function, address};
 }
 
 static void vmTablePushHoisted(VMTable *table, int64_t address, StringView function)
 {
-    assert(table->hoistedFunctionSize < VM_CAPACITY && "Number of hoisted functions exceeds VM capacity.");
+    table->hoistedFunctions = vmGrowArray(table->hoistedFunctions, &table->hoistedFunctionCapacity,
+                                         (size_t) table->hoistedFunctionSize + 1, sizeof(*table->hoistedFunctions));
     table->hoistedFunctions[table->hoistedFunctionSize++] = (Hoisted) {function, address};
 }
 
 static Word numberToWord(StringView source)
 {
-    assert(source.count < VM_CAPACITY && "Number literal exceeds VM capacity.");
+    if (source.count <= 0 || source.count >= VM_CAPACITY)
+    {
+        fprintf(stderr, "Invalid number literal length\n");
+        exit(EXIT_FAILURE);
+    }
     char cString[VM_CAPACITY], *endPtr = NULL;
 
     memcpy(cString, source.data, source.count);
     cString[source.count] = '\0';
 
     Word result = {0};
+    errno = 0;
     result.asI64 = strtoll(cString, &endPtr, 10);
 
     if ((endPtr - cString) != source.count)
     {
+        errno = 0;
         result.asF64 = strtod(cString, &endPtr);
         if ((endPtr - cString) != source.count)
         {
@@ -757,6 +878,11 @@ static Word numberToWord(StringView source)
         }
     }
 
+    if (errno == ERANGE)
+    {
+        fprintf(stderr, "Number literal is out of range: %s\n", cString);
+        exit(EXIT_FAILURE);
+    }
     return result;
 }
 
@@ -767,11 +893,17 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
 
     while (source.count > 0)
     {
-        assert(vm->programSize < VM_CAPACITY && "Number of instructions exceeds VM capacity.");
         StringView line = sv_trim(sv_trimByDelimiter(&source, '\n'));
+        for (int64_t i = 0; i + 1 < line.count; ++i)
+            if (line.data[i] == '-' && line.data[i + 1] == '-')
+            {
+                line.count = i;
+                line = sv_trim(line);
+                break;
+            }
         ++lineNumber;
 
-        if (line.count > 0 && !(line.data[0] == '-' && line.data[1] == '-'))
+        if (line.count > 0)
         {
             StringView token = sv_trimByDelimiter(&line, ' ');
 
@@ -782,7 +914,9 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
             }
             if (token.count > 0)
             {
-                StringView operand = sv_trim(sv_trimByDelimiter(&line, '-'));
+                StringView operand = sv_trim(line);
+                vm->program = vmGrowArray(vm->program, &vm->programCapacity,
+                                           (size_t) vm->programSize + 1, sizeof(*vm->program));
 
                 if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_PUT))))
                 {
@@ -816,7 +950,8 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_FMOD))))
                     vm->program[vm->programSize++] = (Instruction) {INST_FMOD, {0}};
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_JUMP))))
-                    if (operand.count > 0 && isdigit(*operand.data))
+                    if (operand.count > 0 && (isdigit((unsigned char) *operand.data) ||
+                        *operand.data == '-' || *operand.data == '+'))
                         vm->program[vm->programSize++] = (Instruction) {INST_JUMP, .value.asI64 = sv_toInt(operand)};
                     else
                     {
@@ -824,7 +959,8 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
                         vm->program[vm->programSize++] = (Instruction) {INST_JUMP, {0}};
                     }
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_JUMP_IF))))
-                    if (operand.count > 0 && isdigit(*operand.data))
+                    if (operand.count > 0 && (isdigit((unsigned char) *operand.data) ||
+                        *operand.data == '-' || *operand.data == '+'))
                         vm->program[vm->programSize++] = (Instruction) {INST_JUMP_IF, .value.asI64 = sv_toInt(operand)};
                     else
                     {
@@ -834,7 +970,8 @@ static void vmParseSource(StringView source, QuarkVM *vm, VMTable *vmTable, cons
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_RETURN))))
                     vm->program[vm->programSize++] = (Instruction) {INST_RETURN, {0}};
                 else if (sv_equals(token, sv_cStringAsStringView(getInstructionName(INST_INVOKE))))
-                    if (operand.count > 0 && isdigit(*operand.data))
+                    if (operand.count > 0 && (isdigit((unsigned char) *operand.data) ||
+                        *operand.data == '-' || *operand.data == '+'))
                         vm->program[vm->programSize++] = (Instruction) {INST_INVOKE, .value.asI64 = sv_toInt(operand)};
                     else
                     {

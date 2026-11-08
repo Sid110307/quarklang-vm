@@ -4,7 +4,7 @@ LIBS=-lm
 
 EXAMPLES=$(patsubst %.qas,%.qce,$(wildcard ./examples/*.qas))
 
-.PHONY: all examples
+.PHONY: all examples interpreter compiler disassembler
 all: interpreter compiler disassembler
 
 help:
@@ -22,19 +22,19 @@ help:
 	@echo "\033[1;36m  ext-install\033[0m: Install the extensions/plugins for an editor."
 	@echo "\033[1;36m  help\033[0m: Show this help message and exit."
 
-interpreter: src/quarki.c src/include/compiler.h
-	@echo -n "\033[1;36mBuilding interpreter... \033[0m"
-	mkdir -p bin
-	$(CC) $(CFLAGS) $(CWARNINGS) -o bin/quarki $< $(LIBS)
-	@echo "\033[1;32mDone.\033[0m"
-
-compiler: src/quarkc.c src/include/compiler.h
+compiler: src/quarkc.c src/include/compiler.h src/include/stringview.h
 	@echo -n "\033[1;36mBuilding compiler... \033[0m"
 	mkdir -p bin
 	$(CC) $(CFLAGS) $(CWARNINGS) -o bin/quarkc $< $(LIBS)
 	@echo "\033[1;32mDone.\033[0m"
 
-disassembler: src/unquark.c src/include/compiler.h
+interpreter: src/quarki.c src/include/compiler.h src/include/stringview.h src/include/native.h
+	@echo -n "\033[1;36mBuilding interpreter... \033[0m"
+	mkdir -p bin
+	$(CC) $(CFLAGS) $(CWARNINGS) -o bin/quarki $< $(LIBS)
+	@echo "\033[1;32mDone.\033[0m"
+
+disassembler: src/unquark.c src/include/compiler.h src/include/stringview.h
 	@echo -n "\033[1;36mBuilding disassembler... \033[0m"
 	mkdir -p bin
 	$(CC) $(CFLAGS) $(CWARNINGS) -o bin/unquark $< $(LIBS)
@@ -44,15 +44,15 @@ examples: $(EXAMPLES)
 
 examples/%.qce: interpreter compiler examples/%.qas
 	@echo "\033[1;36mRunning example \033[0m$(word 3, $^)\033[1;36m...\033[0m "
-	./bin/quarki -f $(word 3, $^) >/dev/null
-	./bin/quarkc -f $@
+	./bin/quarkc -f $(word 3, $^) >/dev/null
+	./bin/quarki -f $@
 
 install:
 	@echo -n "\033[1;36mInstalling binaries... \033[0m"
 
 	mkdir -p /usr/local/quark
-	sudo cp bin/quarki /usr/local/quark/quarki
 	sudo cp bin/quarkc /usr/local/quark/quarkc
+	sudo cp bin/quarki /usr/local/quark/quarki
 	sudo cp bin/unquark /usr/local/quark/unquark
 
 	./utils.sh bash
@@ -63,8 +63,8 @@ install-user:
 	@echo -n "\033[1;36mInstalling binaries for user $(USER)... \033[0m"
 
 	mkdir -p $(HOME)/.local/share/quark
-	sudo cp bin/quarki $(HOME)/.local/share/quark/quarki
 	sudo cp bin/quarkc $(HOME)/.local/share/quark/quarkc
+	sudo cp bin/quarki $(HOME)/.local/share/quark/quarki
 	sudo cp bin/unquark $(HOME)/.local/share/quark/unquark
 
 	./utils.sh bash

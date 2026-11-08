@@ -1,88 +1,56 @@
-#include "include/native.h"
 #include "include/compiler.h"
-#include <stdio.h>
 
 QuarkVM quarkVm = {0};
-int debug = 0, stepDebug = 0, limit = -1, dump = 0;
+VMTable table = {0};
 
 int main(int argc, char **argv)
 {
     if (argc > 1)
-        for (int i = 1; i < argc; ++i)
+        if (strcmp(argv[1], "--file") == 0 || strcmp(argv[1], "-f") == 0)
         {
-            if (strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0) debug = 1;
-            else if (strcmp(argv[i], "--step") == 0 || strcmp(argv[i], "-s") == 0) stepDebug = 1;
-            else if (strcmp(argv[i], "--dump") == 0 || strcmp(argv[i], "-D") == 0) dump = 1;
-            else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
+            const char *inputFilePath = argv[2];
+            if (inputFilePath == NULL)
             {
-                printf("[\033[1;34mINFO\033[0m]: Usage: %s [options] [--file | -f] <input_file.qce>\n\n", argv[0]);
-                printf("[\033[1;34mINFO\033[0m]: Required:\n");
-                printf("[\033[1;34mINFO\033[0m]:   --file <file>  | -f <file>: The file to compile\n");
-                printf("[\033[1;34mINFO\033[0m]: Optional:\n");
-                printf("[\033[1;34mINFO\033[0m]:   --debug        | -d: Start an interactive debugger\n");
-                printf("[\033[1;34mINFO\033[0m]:   --step         | -s: Step through the program\n");
-                printf("[\033[1;34mINFO\033[0m]:   --dump         | -D: Dump the stack at the end of execution\n");
-                printf("[\033[1;34mINFO\033[0m]:   --help         | -h: Print this help message and exit\n");
-
-                exit(EXIT_SUCCESS);
-            } else if (strcmp(argv[i], "--file") == 0 || strcmp(argv[i], "-f") == 0)
-            {
-                const char *inputFilePath = argv[++i];
-                if (inputFilePath == NULL)
-                {
-                    fprintf(stderr, "[\033[1;31mERROR\033[0m]: Missing input file.\n");
-                    printf("[\033[1;34mINFO\033[0m]: Usage: %s [options] [--file | -f] <input_file.qce>\n\n", argv[0]);
-                    exit(EXIT_FAILURE);
-                }
-
-                vmLoadProgramFromFile(&quarkVm, inputFilePath);
-
-                vmPushNativeFunc(&quarkVm, vmAllocate); // 0
-                vmPushNativeFunc(&quarkVm, vmFree);     // 1
-                vmPushNativeFunc(&quarkVm, vmPrintF64); // 2
-                vmPushNativeFunc(&quarkVm, vmPrintI64); // 3
-                vmPushNativeFunc(&quarkVm, vmPrintPtr); // 4
-
-                if (stepDebug == 1)
-                    for (int j = 0; limit != 0 && !quarkVm.halt; ++j)
-                    {
-                        int currentOp = quarkVm.instructionPointer;
-                        if (currentOp >= (int) quarkVm.programSize) break;
-
-                        printf("Instruction: %s (%" PRId64 " | %lf | %p)\n",
-                               getInstructionName(quarkVm.program[currentOp].type),
-                               quarkVm.program[currentOp].value.asI64,
-                               quarkVm.program[currentOp].value.asF64,
-                               quarkVm.program[currentOp].value.asPtr);
-
-                        if (vmExecuteInstruction(&quarkVm) != EX_OK) return EXIT_FAILURE;
-                        vmDumpStack(stdout, &quarkVm);
-
-                        getchar();
-                        if (limit > 0) --limit;
-                    }
-                else
-                {
-                    if (dump) vmDumpStack(stdout, &quarkVm);
-                    if (vmExecuteProgram(&quarkVm, limit, debug) != EX_OK) return EXIT_FAILURE;
-
-                    return EXIT_SUCCESS;
-                }
-
-                return EXIT_SUCCESS;
-            } else
-            {
-                fprintf(stderr, "[\033[1;31mERROR\033[0m]: Unknown argument: %s\n", argv[i]);
-                printf("[\033[1;34mINFO\033[0m]: Usage: %s [options] [--file | -f] <input_file.qce>\n\n", argv[0]);
-
+                fprintf(stderr, "[\033[1;31mERROR\033[0m]: Missing input file\n");
+                printf("[\033[1;34mINFO\033[0m]: Usage: %s [--file | -f] <input_file.qas>\n\n", argv[0]);
                 exit(EXIT_FAILURE);
             }
+
+            char *outputFilePath = malloc(strlen(inputFilePath) + 5);
+
+            if (outputFilePath == NULL)
+            {
+                fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not allocate memory for output file\n");
+                exit(EXIT_FAILURE);
+            }
+
+            strcpy(outputFilePath, inputFilePath);
+
+            char *dot = strrchr(outputFilePath, '.');
+            if (dot != NULL) *dot = '\0';
+
+            strcat(outputFilePath, ".qce");
+            StringView source = sv_readFile(inputFilePath);
+            vmParseSource(source, &quarkVm, &table, inputFilePath);
+            vmSaveProgramToFile(&quarkVm, outputFilePath);
+
+            printf("[\033[1;34mINFO\033[0m]: Program compiled to \"%s\".\n", outputFilePath);
+            free(outputFilePath);
+            free((void *) source.data);
+            free(quarkVm.program);
+            free(table.functions);
+            free(table.hoistedFunctions);
+            return EXIT_SUCCESS;
+        } else
+        {
+            fprintf(stderr, "[\033[1;31mERROR\033[0m]: Unknown argument: %s\n", argv[1]);
+            printf("[\033[1;34mINFO\033[0m]: Usage: %s [--file | -f] <input_file.qas>\n\n", argv[0]);
+
+            exit(EXIT_FAILURE);
         }
     else
     {
-        printf("[\033[1;34mINFO\033[0m]: Usage: %s [options] [--file | -f] <input_file.qce>\n\n", argv[0]);
+        printf("[\033[1;34mINFO\033[0m]: Usage: %s [--file | -f] <input_file.qas>\n\n", argv[0]);
         exit(EXIT_FAILURE);
     }
-
-    return EXIT_SUCCESS;
 }

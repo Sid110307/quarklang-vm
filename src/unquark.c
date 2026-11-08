@@ -59,5 +59,6 @@ int main(int argc, char **argv)
         }
     }
 
+    free(vm.program);
     return EXIT_SUCCESS;
 }

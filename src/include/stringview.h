@@ -56,12 +56,26 @@ static int sv_equals(StringView a, StringView b)
     return a.count != b.count ? 0 : memcmp(a.data, b.data, a.count) == 0;
 }
 
-static int sv_toInt(StringView sv)
+static int64_t sv_toInt(StringView sv)
 {
-    int result = 0;
-    for (int64_t i = 0; i < sv.count && isdigit(sv.data[i]); ++i) result = result * 10 + sv.data[i] - '0';
-
-    return result;
+    int negative = sv.count > 0 && sv.data[0] == '-';
+    int64_t start = sv.count > 0 && (negative || sv.data[0] == '+') ? 1 : 0;
+    uint64_t limit = (uint64_t) INT64_MAX + (unsigned int) negative;
+    uint64_t result = 0;
+    int valid = start < sv.count;
+    for (int64_t i = start; valid && i < sv.count; ++i)
+    {
+        unsigned int digit = (unsigned char) sv.data[i] - (unsigned int) '0';
+        if (digit > 9 || result > (limit - digit) / 10) valid = 0;
+        else result = result * 10 + digit;
+    }
+    if (!valid)
+    {
+        fprintf(stderr, "Invalid integer operand \"%.*s\"\n", (int) sv.count, sv.data);
+        exit(EXIT_FAILURE);
+    }
+    if (negative) return result == (uint64_t) INT64_MAX + 1 ? INT64_MIN : -(int64_t) result;
+    return (int64_t) result;
 }
 
 static StringView sv_readFile(const char *filePath)
@@ -88,7 +102,7 @@ static StringView sv_readFile(const char *filePath)
         exit(EXIT_FAILURE);
     }
 
-    char *fileContents = malloc(fileSize);
+    char *fileContents = malloc((size_t) fileSize + 1);
     if (fileContents == NULL)
     {
         fprintf(stderr, "[\033[1;31mERROR\033[0m]: Could not allocate memory for file \"%s\" (%s)\n", filePath,
@@ -110,7 +124,7 @@ static StringView sv_readFile(const char *filePath)
         exit(EXIT_FAILURE);
     }
 
-    fileContents[fileSize] = '\0';
+    fileContents[readBytes] = '\0';
     fclose(file);
 
     return (StringView) {readBytes, fileContents};

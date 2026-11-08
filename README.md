@@ -60,22 +60,27 @@ $ make install-user -s
 
 ### Compiling and running programs
 
-- To compile a QuarkLang Assembly file (`.qas`) into a QuarkLang Compiled Executable (`.qce`) file, run `quarki` with a
+- To compile a QuarkLang Assembly file (`.qas`) into a QuarkLang Compiled Executable (`.qce`) file, run `quarkc` with a
   file argument:
 
 ```sh
-$ quarki -f <source.qas>
+$ quarkc -f <source.qas>
 # Or
-$ quarki --file <source.qas>
+$ quarkc --file <source.qas>
 ```
 
-- To run a QuarkLang Compiled Executable (`.qce`) file, run `quarkc` with a file argument:
+- To run a QuarkLang Compiled Executable (`.qce`) file, run `quarki` with a file argument:
 
 ```sh
-$ quarkc -f <output.qce>
+$ quarki -f <output.qce>
 # Or
-$ quarkc --file <output.qce>
+$ quarki --file <output.qce>
 ```
+
+Bytecode version 1 starts with `QCE\0`, a little-endian 32-bit version (`1`), and a little-endian 64-bit instruction count.
+Each instruction contains a one-byte opcode and an eight-byte little-endian operand. Integers use signed 64-bit two's complement;
+floating-point values use IEEE 754 binary64 bits. Instructions without operands store zero. Invalid headers, lengths, opcodes,
+operands, and static jump targets are rejected. Recompile older `.qce` files with `quarkc`.
 
 ### Decompiler/Disassembler
 
@@ -90,12 +95,12 @@ $ unquark --file <source.qce>
 ## Debugging
 
 - There is a built-in debugger that can be used to debug QuarkLang programs.
-- Use the `-d` or `--debug` flag in the compiler to enable the debugger.
+- Use the `-d` or `--debug` flag in the interpreter to enable the debugger.
 
 ```sh
-$ quarkc -d -f <source.qas>
+$ quarki -d -f <output.qce>
 # Or
-$ quarkc --debug -f <source.qas>
+$ quarki --debug -f <output.qce>
 ```
 
 ## Examples
